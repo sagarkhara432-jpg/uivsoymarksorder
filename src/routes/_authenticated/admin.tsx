@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut } from "lucide-react";
+import { Shield, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { decideVerification } from "@/lib/admin.functions";
 
@@ -17,17 +17,19 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type Tab = "orders" | "menu" | "partners";
+type Tab = "orders" | "menu" | "partners" | "offers" | "users";
 
 function AdminPage() {
   const nav = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [email, setEmail] = useState<string>("");
   const [tab, setTab] = useState<Tab>("orders");
 
   useEffect(() => {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) { nav({ to: "/auth" }); return; }
+      setEmail(u.user.email ?? "");
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
       const admin = roles?.some((r) => r.role === "admin") ?? false;
       setIsAdmin(admin);
@@ -38,11 +40,15 @@ function AdminPage() {
 
   if (isAdmin === null) return <div className="grid min-h-screen place-items-center text-sm">Loading…</div>;
   if (!isAdmin) return (
-    <div className="grid min-h-screen place-items-center p-4">
-      <div className="max-w-md rounded-3xl border border-border/60 bg-card p-6 text-center">
-        <h1 className="text-lg font-extrabold">Not authorized</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Only the master admin can access this panel.</p>
-        <Link to="/" className="press mt-4 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground active:bg-primary-press">Home</Link>
+    <div className="grid min-h-screen place-items-center bg-background p-4">
+      <div className="max-w-md rounded-3xl border border-destructive/40 bg-card p-6 text-center shadow-[var(--shadow-pop)]">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-destructive/10 text-destructive"><Shield className="h-7 w-7" /></div>
+        <h1 className="mt-3 text-lg font-extrabold">Unauthorized access</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Signed in as <span className="font-semibold">{email || "unknown"}</span>. Only the master admin can access this panel.</p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Link to="/" className="press rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground active:bg-primary-press">Home</Link>
+          <button onClick={signOut} className="press rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold active:bg-accent">Sign out</button>
+        </div>
       </div>
     </div>
   );
@@ -51,19 +57,23 @@ function AdminPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /><h1 className="font-extrabold">Master Admin</h1></div>
+          <div className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /><h1 className="font-extrabold">Master Admin</h1><span className="hidden text-[10px] font-semibold uppercase text-muted-foreground sm:inline">· {email}</span></div>
           <button onClick={signOut} className="press inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold active:bg-accent"><LogOut className="h-3.5 w-3.5" /> Sign out</button>
         </div>
-        <div className="mx-auto flex max-w-6xl gap-1 px-4 pb-2">
+        <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2">
           <TabBtn active={tab==="orders"} onClick={() => setTab("orders")} icon={<ClipboardList className="h-4 w-4" />} label="Orders" />
           <TabBtn active={tab==="menu"} onClick={() => setTab("menu")} icon={<MenuIcon className="h-4 w-4" />} label="Menu" />
           <TabBtn active={tab==="partners"} onClick={() => setTab("partners")} icon={<Users className="h-4 w-4" />} label="Partners" />
+          <TabBtn active={tab==="offers"} onClick={() => setTab("offers")} icon={<Tag className="h-4 w-4" />} label="Offers" />
+          <TabBtn active={tab==="users"} onClick={() => setTab("users")} icon={<UserCheck className="h-4 w-4" />} label="Users" />
         </div>
       </header>
       <main className="mx-auto max-w-6xl p-4">
         {tab === "orders" && <OrdersTab />}
         {tab === "menu" && <MenuTab />}
         {tab === "partners" && <PartnersTab />}
+        {tab === "offers" && <OffersTab />}
+        {tab === "users" && <UsersTab />}
       </main>
     </div>
   );
@@ -71,7 +81,7 @@ function AdminPage() {
 
 function TabBtn({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
-    <button onClick={onClick} className={`press inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${active ? "bg-primary text-primary-foreground" : "bg-surface border border-border active:bg-accent"}`}>{icon}{label}</button>
+    <button onClick={onClick} className={`press inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${active ? "bg-primary text-primary-foreground" : "bg-surface border border-border active:bg-accent"}`}>{icon}{label}</button>
   );
 }
 
@@ -213,6 +223,173 @@ function PartnersTab() {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function OffersTab() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [form, setForm] = useState({ code: "", description: "", discount_type: "percent", value: "", min_order: "", max_discount: "", usage_limit: "", expires_at: "", is_active: true });
+
+  async function load() {
+    const { data } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
+    setRows(data ?? []);
+  }
+  useEffect(() => {
+    load();
+    const ch = supabase.channel("admin-coupons").on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, () => load()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.code.trim() || !form.value) return toast.error("Code and value required");
+    const payload: any = {
+      code: form.code.trim().toUpperCase(),
+      description: form.description || null,
+      discount_type: form.discount_type,
+      value: Number(form.value),
+      min_order: form.min_order ? Number(form.min_order) : 0,
+      max_discount: form.max_discount ? Number(form.max_discount) : null,
+      usage_limit: form.usage_limit ? Number(form.usage_limit) : null,
+      expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
+      is_active: form.is_active,
+    };
+    const { error } = await supabase.from("coupons").insert(payload);
+    if (error) return toast.error(error.message);
+    toast.success("Coupon added");
+    setForm({ code: "", description: "", discount_type: "percent", value: "", min_order: "", max_discount: "", usage_limit: "", expires_at: "", is_active: true });
+  }
+
+  async function toggle(id: string, v: boolean) {
+    const { error } = await supabase.from("coupons").update({ is_active: v }).eq("id", id);
+    if (error) toast.error(error.message);
+  }
+  async function del(id: string) {
+    if (!confirm("Delete this coupon?")) return;
+    const { error } = await supabase.from("coupons").delete().eq("id", id);
+    if (error) toast.error(error.message);
+  }
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={add} className="grid gap-2 rounded-2xl border border-border/60 bg-card p-4 sm:grid-cols-3">
+        <input placeholder="CODE (e.g. WELCOME50)" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm uppercase" />
+        <select value={form.discount_type} onChange={(e) => setForm({ ...form, discount_type: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+          <option value="percent">Percent (%)</option>
+          <option value="flat">Flat (₹)</option>
+        </select>
+        <input type="number" placeholder="Value" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+        <input placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-3" />
+        <input type="number" placeholder="Min order ₹" value={form.min_order} onChange={(e) => setForm({ ...form, min_order: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+        <input type="number" placeholder="Max discount ₹" value={form.max_discount} onChange={(e) => setForm({ ...form, max_discount: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+        <input type="number" placeholder="Usage limit" value={form.usage_limit} onChange={(e) => setForm({ ...form, usage_limit: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+        <input type="datetime-local" placeholder="Expires" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-2" />
+        <label className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+          <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> Active
+        </label>
+        <button className="press col-span-full rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground active:bg-primary-press"><Plus className="mr-1 inline h-4 w-4" /> Create coupon</button>
+      </form>
+
+      <div className="space-y-2">
+        {!rows.length && <p className="py-16 text-center text-sm text-muted-foreground">No coupons yet.</p>}
+        {rows.map((c) => {
+          const expired = c.expires_at && new Date(c.expires_at) < new Date();
+          return (
+            <div key={c.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-offer text-offer-foreground"><Tag className="h-4 w-4" /></div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-extrabold tracking-wide">{c.code} <span className="ml-1 text-[10px] font-semibold uppercase text-muted-foreground">{c.discount_type === "percent" ? `${c.value}% off` : `₹${c.value} off`}</span></p>
+                <p className="truncate text-xs text-muted-foreground">{c.description || "—"} · used {c.used_count}{c.usage_limit ? `/${c.usage_limit}` : ""}{c.expires_at ? ` · exp ${new Date(c.expires_at).toLocaleDateString()}` : ""}</p>
+              </div>
+              {expired && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">Expired</span>}
+              <button onClick={() => toggle(c.id, !c.is_active)} className={`press rounded-full px-2 py-1 text-[10px] font-bold ${c.is_active ? "bg-fresh text-fresh-foreground" : "bg-muted text-muted-foreground"}`}>{c.is_active ? "Active" : "Paused"}</button>
+              <button onClick={() => del(c.id)} className="press grid h-8 w-8 place-items-center rounded-full text-destructive active:bg-accent"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function UsersTab() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [q, setQ] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+
+  async function load() {
+    const { data: profiles } = await supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(500);
+    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+    const byUser = new Map<string, string[]>();
+    (roles ?? []).forEach((r: any) => {
+      const arr = byUser.get(r.user_id) ?? [];
+      arr.push(r.role);
+      byUser.set(r.user_id, arr);
+    });
+    setRows((profiles ?? []).map((p: any) => ({ ...p, roles: byUser.get(p.id) ?? [] })));
+  }
+  useEffect(() => {
+    load();
+    const ch = supabase.channel("admin-users").on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => load()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  async function toggleBlock(id: string, blocked: boolean) {
+    const { error } = await supabase.from("profiles").update({ is_blocked: blocked }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success(blocked ? "User blocked" : "User unblocked");
+  }
+
+  const filtered = rows.filter((r) => {
+    if (roleFilter !== "all" && !r.roles.includes(roleFilter)) return false;
+    if (!q) return true;
+    const s = q.toLowerCase();
+    return (r.email ?? "").toLowerCase().includes(s) || (r.full_name ?? "").toLowerCase().includes(s) || (r.phone ?? "").toLowerCase().includes(s);
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, phone…" className="min-w-0 flex-1 rounded-full border border-border bg-surface px-4 py-2 text-sm outline-none focus:border-primary" />
+        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="rounded-full border border-border bg-surface px-3 py-2 text-sm">
+          <option value="all">All roles</option>
+          <option value="customer">Customers</option>
+          <option value="kitchen">Kitchen</option>
+          <option value="delivery">Delivery</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {!filtered.length && <p className="col-span-full py-16 text-center text-sm text-muted-foreground">No users match.</p>}
+        {filtered.map((u) => (
+          <div key={u.id} className={`rounded-2xl border p-3 ${u.is_blocked ? "border-destructive/40 bg-destructive/5" : "border-border/60 bg-card"}`}>
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted">
+                {u.avatar_url ? <img src={u.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-xs font-bold text-muted-foreground">{(u.full_name ?? u.email ?? "?").slice(0, 1).toUpperCase()}</div>}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold">{u.full_name || "Unnamed"}{u.is_blocked && <span className="ml-2 rounded-full bg-destructive px-1.5 py-0.5 text-[9px] font-bold uppercase text-destructive-foreground">Blocked</span>}</p>
+                <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                <p className="text-xs text-muted-foreground">{u.phone ?? "no phone"}{u.city ? ` · ${u.city}` : ""}</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {u.roles.length === 0 && <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">no role</span>}
+                  {u.roles.map((r: string) => (
+                    <span key={r} className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${r === "admin" ? "bg-primary text-primary-foreground" : r === "kitchen" ? "bg-orange text-orange-foreground" : r === "delivery" ? "bg-fresh text-fresh-foreground" : "bg-muted text-muted-foreground"}`}>{r}</span>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => toggleBlock(u.id, !u.is_blocked)}
+                className={`press inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold ${u.is_blocked ? "bg-fresh text-fresh-foreground active:brightness-90" : "bg-destructive text-destructive-foreground active:brightness-90"}`}
+              >
+                {u.is_blocked ? <><UserCheck className="h-3.5 w-3.5" /> Unblock</> : <><UserX className="h-3.5 w-3.5" /> Block</>}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

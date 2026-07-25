@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { ShoppingBag, ChefHat, Bike, ShieldCheck, Sparkles } from "lucide-react";
-import { useSession, useMyRoles } from "@/lib/auth";
+import { useSession, useMyRoles, useMyProfile } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,9 +17,11 @@ export const Route = createFileRoute("/")({
 function Landing() {
   const { user, loading } = useSession();
   const { roles, loading: rolesLoading } = useMyRoles(user);
+  const { profile, loading: profileLoading } = useMyProfile(user);
 
-  if (!loading && user && !rolesLoading) {
+  if (!loading && user && !rolesLoading && !profileLoading) {
     if (roles.includes("admin")) return <Navigate to="/admin" />;
+    if (profile && !profile.profile_completed) return <Navigate to="/onboarding" />;
   }
 
   return (
