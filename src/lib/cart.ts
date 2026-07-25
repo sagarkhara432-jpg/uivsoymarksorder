@@ -74,11 +74,12 @@ export const cart = {
   },
 };
 
+const EMPTY: CartItem[] = [];
 export function useCart() {
   return useSyncExternalStore(
     cart.subscribe,
-    () => read(),
-    () => [] as CartItem[],
+    read,
+    () => EMPTY,
   );
 }
 
