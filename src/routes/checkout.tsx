@@ -130,17 +130,3 @@ function CheckoutPage() {
   );
 }
 
-function Field({ icon, ...p }: { icon?: React.ReactNode; placeholder: string; value: string; onChange: (v: string) => void; type?: string }) {
-  return (
-    <label className="mb-2 flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 focus-within:border-primary">
-      {icon && <span className="text-muted-foreground">{icon}</span>}
-      <input
-        type={p.type ?? "text"}
-        value={p.value}
-        onChange={(e) => p.onChange(e.target.value)}
-        placeholder={p.placeholder}
-        className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-      />
-    </label>
-  );
-}
