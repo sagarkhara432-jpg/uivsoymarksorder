@@ -11,13 +11,18 @@ export type CartItem = {
 
 const KEY = "uivso_cart_v1";
 
+let cached: { raw: string; items: CartItem[] } = { raw: "", items: [] };
 function read(): CartItem[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(localStorage.getItem(KEY) || "[]");
-  } catch {
-    return [];
+  if (typeof window === "undefined") return cached.items;
+  const raw = localStorage.getItem(KEY) || "[]";
+  if (raw !== cached.raw) {
+    try {
+      cached = { raw, items: JSON.parse(raw) };
+    } catch {
+      cached = { raw, items: [] };
+    }
   }
+  return cached.items;
 }
 
 let listeners = new Set<() => void>();
@@ -26,7 +31,9 @@ function emit() {
 }
 
 function write(items: CartItem[]) {
-  localStorage.setItem(KEY, JSON.stringify(items));
+  const raw = JSON.stringify(items);
+  localStorage.setItem(KEY, raw);
+  cached = { raw, items };
   emit();
 }
 
