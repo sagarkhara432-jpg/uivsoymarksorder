@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as MenuRouteImport } from './routes/menu'
 import { Route as CheckoutRouteImport } from './routes/checkout'
@@ -22,6 +23,11 @@ import { Route as AuthenticatedKitchenRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticated/delivery'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PartnerRoute = PartnerRouteImport.update({
   id: '/partner',
   path: '/partner',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/menu': typeof MenuRoute
   '/partner': typeof PartnerRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/kitchen': typeof AuthenticatedKitchenRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/menu': typeof MenuRoute
   '/partner': typeof PartnerRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/kitchen': typeof AuthenticatedKitchenRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/menu': typeof MenuRoute
   '/partner': typeof PartnerRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/delivery': typeof AuthenticatedDeliveryRoute
   '/_authenticated/kitchen': typeof AuthenticatedKitchenRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/menu'
     | '/partner'
+    | '/sitemap.xml'
     | '/admin'
     | '/delivery'
     | '/kitchen'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/menu'
     | '/partner'
+    | '/sitemap.xml'
     | '/admin'
     | '/delivery'
     | '/kitchen'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/menu'
     | '/partner'
+    | '/sitemap.xml'
     | '/_authenticated/admin'
     | '/_authenticated/delivery'
     | '/_authenticated/kitchen'
@@ -174,12 +186,20 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   MenuRoute: typeof MenuRoute
   PartnerRoute: typeof PartnerRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   OrdersIdRoute: typeof OrdersIdRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/partner': {
       id: '/partner'
       path: '/partner'
@@ -290,9 +310,20 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   MenuRoute: MenuRoute,
   PartnerRoute: PartnerRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   OrdersIdRoute: OrdersIdRoute,
   OrdersIndexRoute: OrdersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
