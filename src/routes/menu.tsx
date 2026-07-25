@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Search, ShoppingBag, User as UserIcon, Leaf, Flame, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart, cart, cartTotals } from "@/lib/cart";
-import { useSession } from "@/lib/auth";
+import { useSession, useMyProfile } from "@/lib/auth";
 
 export const Route = createFileRoute("/menu")({
   head: () => ({
