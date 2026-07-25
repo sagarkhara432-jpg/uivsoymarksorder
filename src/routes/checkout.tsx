@@ -92,18 +92,16 @@ function CheckoutPage() {
       </header>
 
       <form onSubmit={submit} className="mx-auto max-w-2xl space-y-4 px-4 py-4">
-        <section className="rounded-2xl border border-border/60 bg-card p-4">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted-foreground">Delivery details</h2>
-          <Field icon={<User className="h-4 w-4" />} placeholder="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
-          <Field icon={<Phone className="h-4 w-4" />} placeholder="Phone number" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} type="tel" />
-          <Field icon={<MapPin className="h-4 w-4" />} placeholder="Address (house, street, area)" value={form.address_line} onChange={(v) => setForm({ ...form, address_line: v })} />
-          <div className="grid grid-cols-2 gap-2">
-            <Field placeholder="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
-            <Field placeholder="PIN code" value={form.pincode} onChange={(v) => setForm({ ...form, pincode: v })} />
+        <section className="rounded-2xl border border-fresh/40 bg-fresh/5 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-fresh">Delivering to</p>
+              <p className="mt-1 text-sm font-bold">{form.name || "—"}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{form.address_line}{form.city ? `, ${form.city}` : ""}{form.pincode ? ` — ${form.pincode}` : ""}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">📞 {form.phone}</p>
+            </div>
+            <Link to="/onboarding" className="press shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-[11px] font-semibold active:bg-accent">Change</Link>
           </div>
-          <button type="button" onClick={detectLocation} className="press mt-1 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold active:bg-accent">
-            <MapPin className="h-3.5 w-3.5" /> {coords.lat ? "Location captured ✓" : "Use my location"}
-          </button>
         </section>
 
         <section className="rounded-2xl border border-border/60 bg-card p-4">
