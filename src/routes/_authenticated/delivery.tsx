@@ -54,7 +54,7 @@ function DeliveryPage() {
     async function load() {
       const { data } = await supabase.from("orders")
         .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id")
-        .eq("partner_id", uid)
+        .eq("partner_id", uid!)
         .in("status", ["accepted", "preparing", "packed", "out_for_delivery"])
         .maybeSingle();
       setOrder(data as Order | null);
