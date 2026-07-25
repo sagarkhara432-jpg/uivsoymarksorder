@@ -61,7 +61,7 @@ function DeliveryPage() {
     }
     load();
     const ch = supabase.channel("delivery-orders")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `partner_id=eq.${uid}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `partner_id=eq.${uid ?? ""}` }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [status, uid]);
