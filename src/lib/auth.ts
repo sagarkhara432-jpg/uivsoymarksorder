@@ -44,3 +44,34 @@ export function useMyRoles(user: User | null) {
   }, [user?.id]);
   return { roles, loading };
 }
+
+export type ProfileRow = {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address_line: string | null;
+  city: string | null;
+  pincode: string | null;
+  lat: number | null;
+  lng: number | null;
+  profile_completed: boolean;
+  is_blocked: boolean;
+};
+
+export function useMyProfile(user: User | null) {
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!user) { setProfile(null); setLoading(false); return; }
+    let cancelled = false;
+    setLoading(true);
+    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (cancelled) return;
+      setProfile((data as ProfileRow) ?? null);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+  return { profile, loading };
+}

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PartnerRouteImport } from './routes/partner'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MenuRouteImport } from './routes/menu'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CartRouteImport } from './routes/cart'
@@ -31,6 +32,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const PartnerRoute = PartnerRouteImport.update({
   id: '/partner',
   path: '/partner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MenuRoute = MenuRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/menu': typeof MenuRoute
+  '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/menu': typeof MenuRoute
+  '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/menu': typeof MenuRoute
+  '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/menu'
+    | '/onboarding'
     | '/partner'
     | '/sitemap.xml'
     | '/admin'
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/menu'
+    | '/onboarding'
     | '/partner'
     | '/sitemap.xml'
     | '/admin'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/menu'
+    | '/onboarding'
     | '/partner'
     | '/sitemap.xml'
     | '/_authenticated/admin'
@@ -185,6 +197,7 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
   MenuRoute: typeof MenuRoute
+  OnboardingRoute: typeof OnboardingRoute
   PartnerRoute: typeof PartnerRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   OrdersIdRoute: typeof OrdersIdRoute
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       path: '/partner'
       fullPath: '/partner'
       preLoaderRoute: typeof PartnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/menu': {
@@ -309,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
   MenuRoute: MenuRoute,
+  OnboardingRoute: OnboardingRoute,
   PartnerRoute: PartnerRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   OrdersIdRoute: OrdersIdRoute,
