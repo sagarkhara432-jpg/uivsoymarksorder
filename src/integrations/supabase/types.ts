@@ -80,6 +80,54 @@ export type Database = {
         }
         Relationships: []
       }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_discount: number | null
+          min_order: number
+          updated_at: string
+          usage_limit: number | null
+          used_count: number
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_discount?: number | null
+          min_order?: number
+          updated_at?: string
+          usage_limit?: number | null
+          used_count?: number
+          value: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_discount?: number | null
+          min_order?: number
+          updated_at?: string
+          usage_limit?: number | null
+          used_count?: number
+          value?: number
+        }
+        Relationships: []
+      }
       first_order_flags: {
         Row: {
           order_id: string | null
@@ -355,6 +403,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_blocked: boolean
           phone: string | null
           updated_at: string
         }
@@ -364,6 +413,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_blocked?: boolean
           phone?: string | null
           updated_at?: string
         }
@@ -373,6 +423,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_blocked?: boolean
           phone?: string | null
           updated_at?: string
         }
