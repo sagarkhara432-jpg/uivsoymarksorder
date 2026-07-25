@@ -21,13 +21,21 @@ type Category = { id: string; name: string; emoji: string | null; sort_order: nu
 type Item = { id: string; category_id: string | null; name: string; description: string | null; price: number; image_url: string | null; is_veg: boolean; is_available: boolean; is_bestseller: boolean };
 
 function MenuPage() {
+  const nav = useNavigate();
   const { user } = useSession();
+  const { profile, loading: profileLoading } = useMyProfile(user);
   const [cats, setCats] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [q, setQ] = useState("");
   const [active, setActive] = useState<string | "all">("all");
   const cartItems = useCart();
   const { count, subtotal } = cartTotals(cartItems);
+
+  useEffect(() => {
+    if (user && !profileLoading && profile && !profile.profile_completed) {
+      nav({ to: "/onboarding" });
+    }
+  }, [user?.id, profile?.profile_completed, profileLoading]);
 
   useEffect(() => {
     supabase.from("categories").select("*").order("sort_order").then(({ data }) => setCats(data ?? []));
