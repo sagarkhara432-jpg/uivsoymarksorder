@@ -48,13 +48,6 @@ function CheckoutPage() {
     });
   }, [user?.id]);
 
-  function detectLocation() {
-    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
-    navigator.geolocation.getCurrentPosition(
-      (p) => { setCoords({ lat: p.coords.latitude, lng: p.coords.longitude }); toast.success("Location captured"); },
-      () => toast.error("Could not detect location"),
-    );
-  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
