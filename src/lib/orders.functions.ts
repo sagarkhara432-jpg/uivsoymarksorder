@@ -145,8 +145,13 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => StatusInput.parse(d))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = { status: data.status };
     const now = new Date().toISOString();
+    const patch: {
+      status: typeof data.status;
+      packed_at?: string;
+      out_for_delivery_at?: string;
+      delivered_at?: string;
+    } = { status: data.status };
     if (data.status === "packed") patch.packed_at = now;
     if (data.status === "out_for_delivery") patch.out_for_delivery_at = now;
     if (data.status === "delivered") patch.delivered_at = now;
