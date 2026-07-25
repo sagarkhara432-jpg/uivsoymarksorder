@@ -34,11 +34,18 @@ function CheckoutPage() {
     if (!loading && !user) nav({ to: "/auth" });
   }, [loading, user]);
   useEffect(() => {
-    if (user) {
-      supabase.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle().then(({ data }) => {
-        setForm((f) => ({ ...f, name: data?.full_name ?? user.user_metadata?.full_name ?? "", phone: data?.phone ?? "" }));
+    if (!user) return;
+    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (!data?.profile_completed) { nav({ to: "/onboarding" }); return; }
+      setForm({
+        name: data.full_name ?? "",
+        phone: data.phone ?? "",
+        address_line: data.address_line ?? "",
+        city: data.city ?? "",
+        pincode: data.pincode ?? "",
       });
-    }
+      if (data.lat && data.lng) setCoords({ lat: data.lat, lng: data.lng });
+    });
   }, [user?.id]);
 
   function detectLocation() {
