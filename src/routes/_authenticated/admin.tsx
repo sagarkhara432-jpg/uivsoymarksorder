@@ -677,3 +677,23 @@ function AuditTab() {
     </div>
   );
 }
+
+function ProfileEditForm({ user, onCancel, onSave }: { user: any; onCancel: () => void; onSave: (id: string, patch: any) => void }) {
+  const [f, setF] = useState({
+    full_name: user.full_name ?? "", phone: user.phone ?? "",
+    address_line: user.address_line ?? "", city: user.city ?? "", pincode: user.pincode ?? "",
+  });
+  return (
+    <div className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-2">
+      <input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} placeholder="Full name" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="Phone" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.address_line} onChange={(e) => setF({ ...f, address_line: e.target.value })} placeholder="Address" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-2" />
+      <input value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} placeholder="City" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.pincode} onChange={(e) => setF({ ...f, pincode: e.target.value })} placeholder="Pincode" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <div className="col-span-full flex gap-2">
+        <button onClick={() => onSave(user.id, f)} className="press flex-1 rounded-full bg-primary py-2 text-xs font-bold text-primary-foreground active:bg-primary-press"><Save className="mr-1 inline h-3.5 w-3.5" /> Save profile</button>
+        <button onClick={onCancel} className="press rounded-full border border-border bg-surface px-4 py-2 text-xs font-semibold active:bg-accent"><X className="h-3.5 w-3.5" /></button>
+      </div>
+    </div>
+  );
+}
