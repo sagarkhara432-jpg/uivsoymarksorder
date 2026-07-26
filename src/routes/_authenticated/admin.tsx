@@ -66,6 +66,7 @@ function AdminPage() {
           <TabBtn active={tab==="partners"} onClick={() => setTab("partners")} icon={<Users className="h-4 w-4" />} label="Partners" />
           <TabBtn active={tab==="offers"} onClick={() => setTab("offers")} icon={<Tag className="h-4 w-4" />} label="Offers" />
           <TabBtn active={tab==="users"} onClick={() => setTab("users")} icon={<UserCheck className="h-4 w-4" />} label="Users" />
+          <TabBtn active={tab==="audit"} onClick={() => setTab("audit")} icon={<History className="h-4 w-4" />} label="Audit log" />
         </div>
       </header>
       <main className="mx-auto max-w-6xl p-4">
@@ -74,7 +75,9 @@ function AdminPage() {
         {tab === "partners" && <PartnersTab />}
         {tab === "offers" && <OffersTab />}
         {tab === "users" && <UsersTab />}
+        {tab === "audit" && <AuditTab />}
       </main>
+
     </div>
   );
 }
