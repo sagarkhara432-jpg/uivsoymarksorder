@@ -330,6 +330,8 @@ function PartnersTab() {
 function OffersTab() {
   const [rows, setRows] = useState<any[]>([]);
   const [form, setForm] = useState({ code: "", description: "", discount_type: "percent", value: "", min_order: "", max_discount: "", usage_limit: "", expires_at: "", is_active: true });
+  const [editId, setEditId] = useState<string | null>(null);
+
 
   async function load() {
     const { data } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
