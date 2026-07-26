@@ -31,8 +31,10 @@ function AdminPage() {
       if (!u.user) { nav({ to: "/auth" }); return; }
       setEmail(u.user.email ?? "");
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
-      const admin = roles?.some((r) => r.role === "admin") ?? false;
-      setIsAdmin(admin);
+      const hasRole = roles?.some((r) => r.role === "admin") ?? false;
+      const isMaster = (u.user.email ?? "").toLowerCase() === "sagarkharal21@gmail.com";
+      setIsAdmin(hasRole && isMaster);
+
     })();
   }, []);
 
