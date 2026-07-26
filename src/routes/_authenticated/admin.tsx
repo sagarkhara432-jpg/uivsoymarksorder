@@ -152,6 +152,35 @@ function MenuTab() {
     if (!confirm("Delete this item?")) return;
     await supabase.from("menu_items").delete().eq("id", id); load();
   }
+  async function saveItem(id: string, patch: any) {
+    const { error } = await supabase.from("menu_items").update({
+      name: patch.name, price: Number(patch.price), description: patch.description || null,
+      image_url: patch.image_url || null, category_id: patch.category_id || null, is_veg: patch.is_veg,
+    }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Saved"); setEditId(null); load();
+  }
+
+  async function addCat(e: React.FormEvent) {
+    e.preventDefault();
+    if (!catForm.name.trim()) return toast.error("Category name required");
+    const { error } = await supabase.from("categories").insert({
+      name: catForm.name.trim(), emoji: catForm.emoji || null, sort_order: catForm.sort_order ? Number(catForm.sort_order) : 0,
+    });
+    if (error) return toast.error(error.message);
+    setCatForm({ name: "", emoji: "", sort_order: "" }); load();
+  }
+  async function saveCat(id: string, name: string, emoji: string, sort_order: string) {
+    const { error } = await supabase.from("categories").update({ name, emoji: emoji || null, sort_order: Number(sort_order) || 0 }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Category saved"); setEditCatId(null); load();
+  }
+  async function delCat(id: string) {
+    if (!confirm("Delete this category? Dishes stay but lose their category.")) return;
+    const { error } = await supabase.from("categories").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    load();
+  }
 
   return (
     <div className="space-y-4">
@@ -170,15 +199,39 @@ function MenuTab() {
         <button className="press col-span-full rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground active:bg-primary-press"><Plus className="mr-1 inline h-4 w-4" /> Add dish</button>
       </form>
 
+      <section className="rounded-2xl border border-border/60 bg-card p-4">
+        <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Categories</h2>
+        <form onSubmit={addCat} className="mt-2 flex flex-wrap gap-2">
+          <input placeholder="Name" value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} className="min-w-0 flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+          <input placeholder="Emoji" value={catForm.emoji} onChange={(e) => setCatForm({ ...catForm, emoji: e.target.value })} className="w-20 rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+          <input type="number" placeholder="Sort" value={catForm.sort_order} onChange={(e) => setCatForm({ ...catForm, sort_order: e.target.value })} className="w-20 rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+          <button className="press rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground active:bg-primary-press">Add</button>
+        </form>
+        <div className="mt-3 space-y-2">
+          {cats.map((c) => editCatId === c.id ? (
+            <CategoryEditRow key={c.id} cat={c} onCancel={() => setEditCatId(null)} onSave={saveCat} />
+          ) : (
+            <div key={c.id} className="flex items-center gap-2 rounded-xl border border-border/60 bg-surface px-3 py-2 text-sm">
+              <span className="flex-1 truncate">{c.emoji} {c.name} <span className="text-xs text-muted-foreground">· #{c.sort_order}</span></span>
+              <button onClick={() => setEditCatId(c.id)} className="press grid h-8 w-8 place-items-center rounded-full active:bg-accent"><Pencil className="h-4 w-4" /></button>
+              <button onClick={() => delCat(c.id)} className="press grid h-8 w-8 place-items-center rounded-full text-destructive active:bg-accent"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <div className="grid gap-2 sm:grid-cols-2">
-        {items.map((i) => (
+        {items.map((i) => editId === i.id ? (
+          <MenuEditCard key={i.id} item={i} cats={cats} onCancel={() => setEditId(null)} onSave={saveItem} />
+        ) : (
           <div key={i.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3">
             <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted">{i.image_url && <img src={i.image_url} alt="" className="h-full w-full object-cover" />}</div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{i.name}</p>
-              <p className="text-xs text-muted-foreground">₹{i.price}</p>
+              <p className="text-xs text-muted-foreground">₹{i.price}{i.is_veg ? " · veg" : " · non-veg"}</p>
             </div>
             <button onClick={() => toggleAvail(i.id, !i.is_available)} className={`press rounded-full px-2 py-1 text-[10px] font-bold ${i.is_available ? "bg-fresh text-fresh-foreground" : "bg-muted text-muted-foreground"}`}>{i.is_available ? "Available" : "Sold out"}</button>
+            <button onClick={() => setEditId(i.id)} className="press grid h-8 w-8 place-items-center rounded-full active:bg-accent"><Pencil className="h-4 w-4" /></button>
             <button onClick={() => del(i.id)} className="press grid h-8 w-8 place-items-center rounded-full text-destructive active:bg-accent"><Trash2 className="h-4 w-4" /></button>
           </div>
         ))}
@@ -186,6 +239,46 @@ function MenuTab() {
     </div>
   );
 }
+
+function MenuEditCard({ item, cats, onCancel, onSave }: { item: any; cats: any[]; onCancel: () => void; onSave: (id: string, patch: any) => void }) {
+  const [f, setF] = useState({
+    name: item.name ?? "", price: String(item.price ?? ""), description: item.description ?? "",
+    image_url: item.image_url ?? "", category_id: item.category_id ?? "", is_veg: !!item.is_veg,
+  });
+  return (
+    <div className="grid gap-2 rounded-2xl border border-primary/50 bg-card p-3">
+      <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input type="number" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Description" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.image_url} onChange={(e) => setF({ ...f, image_url: e.target.value })} placeholder="Image URL" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <select value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+        <option value="">— category —</option>
+        {cats.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+      </select>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_veg} onChange={(e) => setF({ ...f, is_veg: e.target.checked })} /> Vegetarian</label>
+      <div className="flex gap-2">
+        <button onClick={() => onSave(item.id, f)} className="press flex-1 rounded-full bg-primary py-2 text-xs font-bold text-primary-foreground active:bg-primary-press"><Save className="mr-1 inline h-3.5 w-3.5" /> Save</button>
+        <button onClick={onCancel} className="press rounded-full border border-border bg-surface px-4 py-2 text-xs font-semibold active:bg-accent"><X className="h-3.5 w-3.5" /></button>
+      </div>
+    </div>
+  );
+}
+
+function CategoryEditRow({ cat, onCancel, onSave }: { cat: any; onCancel: () => void; onSave: (id: string, name: string, emoji: string, sort: string) => void }) {
+  const [name, setName] = useState(cat.name ?? "");
+  const [emoji, setEmoji] = useState(cat.emoji ?? "");
+  const [sort, setSort] = useState(String(cat.sort_order ?? 0));
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/50 bg-surface px-3 py-2">
+      <input value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2 py-1.5 text-sm" />
+      <input value={emoji} onChange={(e) => setEmoji(e.target.value)} className="w-16 rounded-lg border border-border bg-card px-2 py-1.5 text-sm" />
+      <input type="number" value={sort} onChange={(e) => setSort(e.target.value)} className="w-16 rounded-lg border border-border bg-card px-2 py-1.5 text-sm" />
+      <button onClick={() => onSave(cat.id, name, emoji, sort)} className="press rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"><Save className="h-3.5 w-3.5" /></button>
+      <button onClick={onCancel} className="press rounded-full border border-border px-3 py-1.5 text-xs font-semibold"><X className="h-3.5 w-3.5" /></button>
+    </div>
+  );
+}
+
 
 function PartnersTab() {
   const [rows, setRows] = useState<any[]>([]);
