@@ -444,6 +444,33 @@ function UsersTab() {
     const { error } = await supabase.from("profiles").update({ is_blocked: blocked }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success(blocked ? "User blocked" : "User unblocked");
+    load();
+  }
+
+  const MASTER = "sagarkharal21@gmail.com";
+
+  async function toggleRole(u: any, role: string, has: boolean) {
+    if (role === "admin" && has && (u.email ?? "").toLowerCase() === MASTER) {
+      return toast.error("The master admin role cannot be removed");
+    }
+    if (has) {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", u.id).eq("role", role as any);
+      if (error) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("user_roles").insert({ user_id: u.id, role: role as any });
+      if (error) return toast.error(error.message);
+    }
+    toast.success("Roles updated");
+    load();
+  }
+
+  async function saveProfile(id: string, patch: any) {
+    const { error } = await supabase.from("profiles").update({
+      full_name: patch.full_name || null, phone: patch.phone || null,
+      address_line: patch.address_line || null, city: patch.city || null, pincode: patch.pincode || null,
+    }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Profile saved"); setEditId(null); load();
   }
 
   const filtered = rows.filter((r) => {
@@ -478,22 +505,33 @@ function UsersTab() {
                 <p className="truncate text-sm font-bold">{u.full_name || "Unnamed"}{u.is_blocked && <span className="ml-2 rounded-full bg-destructive px-1.5 py-0.5 text-[9px] font-bold uppercase text-destructive-foreground">Blocked</span>}</p>
                 <p className="truncate text-xs text-muted-foreground">{u.email}</p>
                 <p className="text-xs text-muted-foreground">{u.phone ?? "no phone"}{u.city ? ` · ${u.city}` : ""}</p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {u.roles.length === 0 && <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">no role</span>}
-                  {u.roles.map((r: string) => (
-                    <span key={r} className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${r === "admin" ? "bg-primary text-primary-foreground" : r === "kitchen" ? "bg-orange text-orange-foreground" : r === "delivery" ? "bg-fresh text-fresh-foreground" : "bg-muted text-muted-foreground"}`}>{r}</span>
-                  ))}
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {ROLES.map((r) => {
+                    const has = u.roles.includes(r);
+                    return (
+                      <button key={r} onClick={() => toggleRole(u, r, has)}
+                        className={`press rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${has ? (r === "admin" ? "bg-primary text-primary-foreground" : r === "kitchen" ? "bg-orange text-orange-foreground" : r === "delivery" ? "bg-fresh text-fresh-foreground" : "bg-secondary text-secondary-foreground") : "border border-border bg-surface text-muted-foreground"}`}>
+                        {has ? r : `+ ${r}`}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <button
-                onClick={() => toggleBlock(u.id, !u.is_blocked)}
-                className={`press inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold ${u.is_blocked ? "bg-fresh text-fresh-foreground active:brightness-90" : "bg-destructive text-destructive-foreground active:brightness-90"}`}
-              >
-                {u.is_blocked ? <><UserCheck className="h-3.5 w-3.5" /> Unblock</> : <><UserX className="h-3.5 w-3.5" /> Block</>}
-              </button>
+              <div className="flex shrink-0 flex-col gap-1">
+                <button
+                  onClick={() => toggleBlock(u.id, !u.is_blocked)}
+                  className={`press inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold ${u.is_blocked ? "bg-fresh text-fresh-foreground active:brightness-90" : "bg-destructive text-destructive-foreground active:brightness-90"}`}
+                >
+                  {u.is_blocked ? <><UserCheck className="h-3.5 w-3.5" /> Unblock</> : <><UserX className="h-3.5 w-3.5" /> Block</>}
+                </button>
+                <button onClick={() => setEditId(editId === u.id ? null : u.id)} className="press inline-flex items-center justify-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold active:bg-accent"><Pencil className="h-3.5 w-3.5" /> Edit</button>
+              </div>
             </div>
+            {editId === u.id && <ProfileEditForm user={u} onCancel={() => setEditId(null)} onSave={saveProfile} />}
           </div>
         ))}
+      </div>
+
       </div>
     </div>
   );
