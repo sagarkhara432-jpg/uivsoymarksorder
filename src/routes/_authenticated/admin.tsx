@@ -422,6 +422,8 @@ function UsersTab() {
   const [rows, setRows] = useState<any[]>([]);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [editId, setEditId] = useState<string | null>(null);
+
 
   async function load() {
     const { data: profiles } = await supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(500);
