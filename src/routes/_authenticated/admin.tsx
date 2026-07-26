@@ -531,9 +531,8 @@ function UsersTab() {
           </div>
         ))}
       </div>
-
-      </div>
     </div>
+
   );
 }
 
