@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck } from "lucide-react";
+import { Shield, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { decideVerification } from "@/lib/admin.functions";
 
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type Tab = "orders" | "menu" | "partners" | "offers" | "users";
+type Tab = "orders" | "menu" | "partners" | "offers" | "users" | "audit";
 
 function AdminPage() {
   const nav = useNavigate();
@@ -31,8 +31,10 @@ function AdminPage() {
       if (!u.user) { nav({ to: "/auth" }); return; }
       setEmail(u.user.email ?? "");
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
-      const admin = roles?.some((r) => r.role === "admin") ?? false;
-      setIsAdmin(admin);
+      const hasRole = roles?.some((r) => r.role === "admin") ?? false;
+      const isMaster = (u.user.email ?? "").toLowerCase() === "sagarkharal21@gmail.com";
+      setIsAdmin(hasRole && isMaster);
+
     })();
   }, []);
 
@@ -66,6 +68,7 @@ function AdminPage() {
           <TabBtn active={tab==="partners"} onClick={() => setTab("partners")} icon={<Users className="h-4 w-4" />} label="Partners" />
           <TabBtn active={tab==="offers"} onClick={() => setTab("offers")} icon={<Tag className="h-4 w-4" />} label="Offers" />
           <TabBtn active={tab==="users"} onClick={() => setTab("users")} icon={<UserCheck className="h-4 w-4" />} label="Users" />
+          <TabBtn active={tab==="audit"} onClick={() => setTab("audit")} icon={<History className="h-4 w-4" />} label="Audit log" />
         </div>
       </header>
       <main className="mx-auto max-w-6xl p-4">
@@ -74,7 +77,9 @@ function AdminPage() {
         {tab === "partners" && <PartnersTab />}
         {tab === "offers" && <OffersTab />}
         {tab === "users" && <UsersTab />}
+        {tab === "audit" && <AuditTab />}
       </main>
+
     </div>
   );
 }
@@ -121,6 +126,10 @@ function MenuTab() {
   const [items, setItems] = useState<any[]>([]);
   const [cats, setCats] = useState<any[]>([]);
   const [form, setForm] = useState({ name: "", price: "", description: "", image_url: "", category_id: "", is_veg: true });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editCatId, setEditCatId] = useState<string | null>(null);
+  const [catForm, setCatForm] = useState({ name: "", emoji: "", sort_order: "" });
+
 
   async function load() {
     const [{ data: c }, { data: m }] = await Promise.all([
@@ -149,6 +158,35 @@ function MenuTab() {
     if (!confirm("Delete this item?")) return;
     await supabase.from("menu_items").delete().eq("id", id); load();
   }
+  async function saveItem(id: string, patch: any) {
+    const { error } = await supabase.from("menu_items").update({
+      name: patch.name, price: Number(patch.price), description: patch.description || null,
+      image_url: patch.image_url || null, category_id: patch.category_id || null, is_veg: patch.is_veg,
+    }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Saved"); setEditId(null); load();
+  }
+
+  async function addCat(e: React.FormEvent) {
+    e.preventDefault();
+    if (!catForm.name.trim()) return toast.error("Category name required");
+    const { error } = await supabase.from("categories").insert({
+      name: catForm.name.trim(), emoji: catForm.emoji || null, sort_order: catForm.sort_order ? Number(catForm.sort_order) : 0,
+    });
+    if (error) return toast.error(error.message);
+    setCatForm({ name: "", emoji: "", sort_order: "" }); load();
+  }
+  async function saveCat(id: string, name: string, emoji: string, sort_order: string) {
+    const { error } = await supabase.from("categories").update({ name, emoji: emoji || null, sort_order: Number(sort_order) || 0 }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Category saved"); setEditCatId(null); load();
+  }
+  async function delCat(id: string) {
+    if (!confirm("Delete this category? Dishes stay but lose their category.")) return;
+    const { error } = await supabase.from("categories").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    load();
+  }
 
   return (
     <div className="space-y-4">
@@ -167,15 +205,39 @@ function MenuTab() {
         <button className="press col-span-full rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground active:bg-primary-press"><Plus className="mr-1 inline h-4 w-4" /> Add dish</button>
       </form>
 
+      <section className="rounded-2xl border border-border/60 bg-card p-4">
+        <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Categories</h2>
+        <form onSubmit={addCat} className="mt-2 flex flex-wrap gap-2">
+          <input placeholder="Name" value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} className="min-w-0 flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+          <input placeholder="Emoji" value={catForm.emoji} onChange={(e) => setCatForm({ ...catForm, emoji: e.target.value })} className="w-20 rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+          <input type="number" placeholder="Sort" value={catForm.sort_order} onChange={(e) => setCatForm({ ...catForm, sort_order: e.target.value })} className="w-20 rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+          <button className="press rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground active:bg-primary-press">Add</button>
+        </form>
+        <div className="mt-3 space-y-2">
+          {cats.map((c) => editCatId === c.id ? (
+            <CategoryEditRow key={c.id} cat={c} onCancel={() => setEditCatId(null)} onSave={saveCat} />
+          ) : (
+            <div key={c.id} className="flex items-center gap-2 rounded-xl border border-border/60 bg-surface px-3 py-2 text-sm">
+              <span className="flex-1 truncate">{c.emoji} {c.name} <span className="text-xs text-muted-foreground">· #{c.sort_order}</span></span>
+              <button onClick={() => setEditCatId(c.id)} className="press grid h-8 w-8 place-items-center rounded-full active:bg-accent"><Pencil className="h-4 w-4" /></button>
+              <button onClick={() => delCat(c.id)} className="press grid h-8 w-8 place-items-center rounded-full text-destructive active:bg-accent"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <div className="grid gap-2 sm:grid-cols-2">
-        {items.map((i) => (
+        {items.map((i) => editId === i.id ? (
+          <MenuEditCard key={i.id} item={i} cats={cats} onCancel={() => setEditId(null)} onSave={saveItem} />
+        ) : (
           <div key={i.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3">
             <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted">{i.image_url && <img src={i.image_url} alt="" className="h-full w-full object-cover" />}</div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{i.name}</p>
-              <p className="text-xs text-muted-foreground">₹{i.price}</p>
+              <p className="text-xs text-muted-foreground">₹{i.price}{i.is_veg ? " · veg" : " · non-veg"}</p>
             </div>
             <button onClick={() => toggleAvail(i.id, !i.is_available)} className={`press rounded-full px-2 py-1 text-[10px] font-bold ${i.is_available ? "bg-fresh text-fresh-foreground" : "bg-muted text-muted-foreground"}`}>{i.is_available ? "Available" : "Sold out"}</button>
+            <button onClick={() => setEditId(i.id)} className="press grid h-8 w-8 place-items-center rounded-full active:bg-accent"><Pencil className="h-4 w-4" /></button>
             <button onClick={() => del(i.id)} className="press grid h-8 w-8 place-items-center rounded-full text-destructive active:bg-accent"><Trash2 className="h-4 w-4" /></button>
           </div>
         ))}
@@ -183,6 +245,46 @@ function MenuTab() {
     </div>
   );
 }
+
+function MenuEditCard({ item, cats, onCancel, onSave }: { item: any; cats: any[]; onCancel: () => void; onSave: (id: string, patch: any) => void }) {
+  const [f, setF] = useState({
+    name: item.name ?? "", price: String(item.price ?? ""), description: item.description ?? "",
+    image_url: item.image_url ?? "", category_id: item.category_id ?? "", is_veg: !!item.is_veg,
+  });
+  return (
+    <div className="grid gap-2 rounded-2xl border border-primary/50 bg-card p-3">
+      <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input type="number" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Description" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.image_url} onChange={(e) => setF({ ...f, image_url: e.target.value })} placeholder="Image URL" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <select value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+        <option value="">— category —</option>
+        {cats.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+      </select>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_veg} onChange={(e) => setF({ ...f, is_veg: e.target.checked })} /> Vegetarian</label>
+      <div className="flex gap-2">
+        <button onClick={() => onSave(item.id, f)} className="press flex-1 rounded-full bg-primary py-2 text-xs font-bold text-primary-foreground active:bg-primary-press"><Save className="mr-1 inline h-3.5 w-3.5" /> Save</button>
+        <button onClick={onCancel} className="press rounded-full border border-border bg-surface px-4 py-2 text-xs font-semibold active:bg-accent"><X className="h-3.5 w-3.5" /></button>
+      </div>
+    </div>
+  );
+}
+
+function CategoryEditRow({ cat, onCancel, onSave }: { cat: any; onCancel: () => void; onSave: (id: string, name: string, emoji: string, sort: string) => void }) {
+  const [name, setName] = useState(cat.name ?? "");
+  const [emoji, setEmoji] = useState(cat.emoji ?? "");
+  const [sort, setSort] = useState(String(cat.sort_order ?? 0));
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/50 bg-surface px-3 py-2">
+      <input value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-border bg-card px-2 py-1.5 text-sm" />
+      <input value={emoji} onChange={(e) => setEmoji(e.target.value)} className="w-16 rounded-lg border border-border bg-card px-2 py-1.5 text-sm" />
+      <input type="number" value={sort} onChange={(e) => setSort(e.target.value)} className="w-16 rounded-lg border border-border bg-card px-2 py-1.5 text-sm" />
+      <button onClick={() => onSave(cat.id, name, emoji, sort)} className="press rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"><Save className="h-3.5 w-3.5" /></button>
+      <button onClick={onCancel} className="press rounded-full border border-border px-3 py-1.5 text-xs font-semibold"><X className="h-3.5 w-3.5" /></button>
+    </div>
+  );
+}
+
 
 function PartnersTab() {
   const [rows, setRows] = useState<any[]>([]);
@@ -230,6 +332,8 @@ function PartnersTab() {
 function OffersTab() {
   const [rows, setRows] = useState<any[]>([]);
   const [form, setForm] = useState({ code: "", description: "", discount_type: "percent", value: "", min_order: "", max_discount: "", usage_limit: "", expires_at: "", is_active: true });
+  const [editId, setEditId] = useState<string | null>(null);
+
 
   async function load() {
     const { data } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
@@ -295,6 +399,7 @@ function OffersTab() {
         {!rows.length && <p className="py-16 text-center text-sm text-muted-foreground">No coupons yet.</p>}
         {rows.map((c) => {
           const expired = c.expires_at && new Date(c.expires_at) < new Date();
+          if (editId === c.id) return <CouponEditCard key={c.id} coupon={c} onCancel={() => setEditId(null)} onSaved={() => { setEditId(null); load(); }} />;
           return (
             <div key={c.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-offer text-offer-foreground"><Tag className="h-4 w-4" /></div>
@@ -304,10 +409,12 @@ function OffersTab() {
               </div>
               {expired && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">Expired</span>}
               <button onClick={() => toggle(c.id, !c.is_active)} className={`press rounded-full px-2 py-1 text-[10px] font-bold ${c.is_active ? "bg-fresh text-fresh-foreground" : "bg-muted text-muted-foreground"}`}>{c.is_active ? "Active" : "Paused"}</button>
+              <button onClick={() => setEditId(c.id)} className="press grid h-8 w-8 place-items-center rounded-full active:bg-accent"><Pencil className="h-4 w-4" /></button>
               <button onClick={() => del(c.id)} className="press grid h-8 w-8 place-items-center rounded-full text-destructive active:bg-accent"><Trash2 className="h-4 w-4" /></button>
             </div>
           );
         })}
+
       </div>
     </div>
   );
@@ -317,6 +424,8 @@ function UsersTab() {
   const [rows, setRows] = useState<any[]>([]);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [editId, setEditId] = useState<string | null>(null);
+
 
   async function load() {
     const { data: profiles } = await supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(500);
@@ -339,6 +448,33 @@ function UsersTab() {
     const { error } = await supabase.from("profiles").update({ is_blocked: blocked }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success(blocked ? "User blocked" : "User unblocked");
+    load();
+  }
+
+  const MASTER = "sagarkharal21@gmail.com";
+
+  async function toggleRole(u: any, role: string, has: boolean) {
+    if (role === "admin" && has && (u.email ?? "").toLowerCase() === MASTER) {
+      return toast.error("The master admin role cannot be removed");
+    }
+    if (has) {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", u.id).eq("role", role as any);
+      if (error) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("user_roles").insert({ user_id: u.id, role: role as any });
+      if (error) return toast.error(error.message);
+    }
+    toast.success("Roles updated");
+    load();
+  }
+
+  async function saveProfile(id: string, patch: any) {
+    const { error } = await supabase.from("profiles").update({
+      full_name: patch.full_name || null, phone: patch.phone || null,
+      address_line: patch.address_line || null, city: patch.city || null, pincode: patch.pincode || null,
+    }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Profile saved"); setEditId(null); load();
   }
 
   const filtered = rows.filter((r) => {
@@ -373,22 +509,192 @@ function UsersTab() {
                 <p className="truncate text-sm font-bold">{u.full_name || "Unnamed"}{u.is_blocked && <span className="ml-2 rounded-full bg-destructive px-1.5 py-0.5 text-[9px] font-bold uppercase text-destructive-foreground">Blocked</span>}</p>
                 <p className="truncate text-xs text-muted-foreground">{u.email}</p>
                 <p className="text-xs text-muted-foreground">{u.phone ?? "no phone"}{u.city ? ` · ${u.city}` : ""}</p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {u.roles.length === 0 && <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">no role</span>}
-                  {u.roles.map((r: string) => (
-                    <span key={r} className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${r === "admin" ? "bg-primary text-primary-foreground" : r === "kitchen" ? "bg-orange text-orange-foreground" : r === "delivery" ? "bg-fresh text-fresh-foreground" : "bg-muted text-muted-foreground"}`}>{r}</span>
-                  ))}
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {ROLES.map((r) => {
+                    const has = u.roles.includes(r);
+                    return (
+                      <button key={r} onClick={() => toggleRole(u, r, has)}
+                        className={`press rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${has ? (r === "admin" ? "bg-primary text-primary-foreground" : r === "kitchen" ? "bg-orange text-orange-foreground" : r === "delivery" ? "bg-fresh text-fresh-foreground" : "bg-secondary text-secondary-foreground") : "border border-border bg-surface text-muted-foreground"}`}>
+                        {has ? r : `+ ${r}`}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <button
-                onClick={() => toggleBlock(u.id, !u.is_blocked)}
-                className={`press inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold ${u.is_blocked ? "bg-fresh text-fresh-foreground active:brightness-90" : "bg-destructive text-destructive-foreground active:brightness-90"}`}
-              >
-                {u.is_blocked ? <><UserCheck className="h-3.5 w-3.5" /> Unblock</> : <><UserX className="h-3.5 w-3.5" /> Block</>}
-              </button>
+              <div className="flex shrink-0 flex-col gap-1">
+                <button
+                  onClick={() => toggleBlock(u.id, !u.is_blocked)}
+                  className={`press inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold ${u.is_blocked ? "bg-fresh text-fresh-foreground active:brightness-90" : "bg-destructive text-destructive-foreground active:brightness-90"}`}
+                >
+                  {u.is_blocked ? <><UserCheck className="h-3.5 w-3.5" /> Unblock</> : <><UserX className="h-3.5 w-3.5" /> Block</>}
+                </button>
+                <button onClick={() => setEditId(editId === u.id ? null : u.id)} className="press inline-flex items-center justify-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold active:bg-accent"><Pencil className="h-3.5 w-3.5" /> Edit</button>
+              </div>
             </div>
+            {editId === u.id && <ProfileEditForm user={u} onCancel={() => setEditId(null)} onSave={saveProfile} />}
           </div>
         ))}
+      </div>
+    </div>
+
+  );
+}
+
+function CouponEditCard({ coupon, onCancel, onSaved }: { coupon: any; onCancel: () => void; onSaved: () => void }) {
+  const toLocal = (iso: string | null) => (iso ? new Date(iso).toISOString().slice(0, 16) : "");
+  const [f, setF] = useState({
+    code: coupon.code ?? "", description: coupon.description ?? "", discount_type: coupon.discount_type ?? "percent",
+    value: String(coupon.value ?? ""), min_order: String(coupon.min_order ?? ""), max_discount: coupon.max_discount == null ? "" : String(coupon.max_discount),
+    usage_limit: coupon.usage_limit == null ? "" : String(coupon.usage_limit), expires_at: toLocal(coupon.expires_at), is_active: !!coupon.is_active,
+  });
+  async function save() {
+    const { error } = await supabase.from("coupons").update({
+      code: f.code.trim().toUpperCase(),
+      description: f.description || null,
+      discount_type: f.discount_type,
+      value: Number(f.value),
+      min_order: f.min_order ? Number(f.min_order) : 0,
+      max_discount: f.max_discount ? Number(f.max_discount) : null,
+      usage_limit: f.usage_limit ? Number(f.usage_limit) : null,
+      expires_at: f.expires_at ? new Date(f.expires_at).toISOString() : null,
+      is_active: f.is_active,
+    }).eq("id", coupon.id);
+    if (error) return toast.error(error.message);
+    toast.success("Coupon updated");
+    onSaved();
+  }
+  return (
+    <div className="grid gap-2 rounded-2xl border border-primary/50 bg-card p-3 sm:grid-cols-3">
+      <input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm uppercase" />
+      <select value={f.discount_type} onChange={(e) => setF({ ...f, discount_type: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+        <option value="percent">Percent (%)</option>
+        <option value="flat">Flat (₹)</option>
+      </select>
+      <input type="number" value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Description" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-3" />
+      <input type="number" value={f.min_order} onChange={(e) => setF({ ...f, min_order: e.target.value })} placeholder="Min order ₹" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input type="number" value={f.max_discount} onChange={(e) => setF({ ...f, max_discount: e.target.value })} placeholder="Max discount ₹" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input type="number" value={f.usage_limit} onChange={(e) => setF({ ...f, usage_limit: e.target.value })} placeholder="Usage limit" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input type="datetime-local" value={f.expires_at} onChange={(e) => setF({ ...f, expires_at: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-2" />
+      <label className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /> Active</label>
+      <div className="col-span-full flex gap-2">
+        <button onClick={save} className="press flex-1 rounded-full bg-primary py-2 text-xs font-bold text-primary-foreground active:bg-primary-press"><Save className="mr-1 inline h-3.5 w-3.5" /> Save changes</button>
+        <button onClick={onCancel} className="press rounded-full border border-border bg-surface px-4 py-2 text-xs font-semibold active:bg-accent"><X className="h-3.5 w-3.5" /></button>
+      </div>
+    </div>
+  );
+}
+
+const ROLES = ["customer", "kitchen", "delivery", "admin"] as const;
+
+function AuditTab() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [table, setTable] = useState("all");
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+
+  async function load() {
+    let query = supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(300);
+    if (table !== "all") query = query.eq("table_name", table);
+    const { data, error } = await query;
+    if (error) return toast.error(error.message);
+    setRows(data ?? []);
+  }
+  useEffect(() => {
+    load();
+    const ch = supabase.channel("admin-audit").on("postgres_changes", { event: "INSERT", schema: "public", table: "audit_logs" }, () => load()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [table]);
+
+  const filtered = rows.filter((r) => {
+    if (!q) return true;
+    const s = q.toLowerCase();
+    return (r.actor_email ?? "").toLowerCase().includes(s) || (r.table_name ?? "").includes(s) || (r.record_id ?? "").includes(s) || JSON.stringify(r.new_data ?? {}).toLowerCase().includes(s);
+  });
+
+  function changedFields(r: any): string[] {
+    if (r.action !== "update" || !r.old_data || !r.new_data) return [];
+    return Object.keys(r.new_data).filter((k) => JSON.stringify(r.old_data[k]) !== JSON.stringify(r.new_data[k]) && k !== "updated_at");
+  }
+
+  const LABEL: Record<string, string> = {
+    coupons: "Offer", profiles: "User", user_roles: "Role", menu_items: "Menu item", categories: "Category",
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by admin email, record, value…" className="min-w-0 flex-1 rounded-full border border-border bg-surface px-4 py-2 text-sm outline-none focus:border-primary" />
+        <select value={table} onChange={(e) => setTable(e.target.value)} className="rounded-full border border-border bg-surface px-3 py-2 text-sm">
+          <option value="all">All activity</option>
+          <option value="coupons">Offers</option>
+          <option value="profiles">Users</option>
+          <option value="user_roles">Roles</option>
+          <option value="menu_items">Menu</option>
+          <option value="categories">Categories</option>
+        </select>
+      </div>
+
+      {!filtered.length && <p className="py-16 text-center text-sm text-muted-foreground">No activity recorded yet.</p>}
+
+      <div className="space-y-2">
+        {filtered.map((r) => {
+          const fields = changedFields(r);
+          const expanded = open === r.id;
+          return (
+            <div key={r.id} className="rounded-2xl border border-border/60 bg-card p-3">
+              <button onClick={() => setOpen(expanded ? null : r.id)} className="flex w-full items-start gap-3 text-left">
+                <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-[10px] font-extrabold uppercase ${r.action === "insert" ? "bg-fresh text-fresh-foreground" : r.action === "delete" ? "bg-destructive text-destructive-foreground" : "bg-offer text-offer-foreground"}`}>
+                  {r.action === "insert" ? "NEW" : r.action === "delete" ? "DEL" : "EDIT"}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold">{LABEL[r.table_name] ?? r.table_name} {r.action === "insert" ? "created" : r.action === "delete" ? "deleted" : "updated"}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    by {r.actor_email ?? "system"} · {new Date(r.created_at).toLocaleString()}
+                    {fields.length ? ` · ${fields.join(", ")}` : ""}
+                  </span>
+                  <span className="block truncate text-[10px] text-muted-foreground">record {String(r.record_id ?? "—").slice(0, 8)}</span>
+                </span>
+              </button>
+              {expanded && (
+                <div className="mt-2 space-y-2 border-t border-border pt-2 text-xs">
+                  {r.action === "update" ? (
+                    fields.length ? fields.map((k) => (
+                      <div key={k} className="flex flex-wrap gap-1">
+                        <span className="font-semibold">{k}:</span>
+                        <span className="text-destructive line-through">{JSON.stringify(r.old_data[k])}</span>
+                        <span>→</span>
+                        <span className="text-fresh font-semibold">{JSON.stringify(r.new_data[k])}</span>
+                      </div>
+                    )) : <p className="text-muted-foreground">No field differences recorded.</p>
+                  ) : (
+                    <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-xl bg-surface p-2">{JSON.stringify(r.new_data ?? r.old_data, null, 2)}</pre>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ProfileEditForm({ user, onCancel, onSave }: { user: any; onCancel: () => void; onSave: (id: string, patch: any) => void }) {
+  const [f, setF] = useState({
+    full_name: user.full_name ?? "", phone: user.phone ?? "",
+    address_line: user.address_line ?? "", city: user.city ?? "", pincode: user.pincode ?? "",
+  });
+  return (
+    <div className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-2">
+      <input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} placeholder="Full name" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="Phone" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.address_line} onChange={(e) => setF({ ...f, address_line: e.target.value })} placeholder="Address" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-2" />
+      <input value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} placeholder="City" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.pincode} onChange={(e) => setF({ ...f, pincode: e.target.value })} placeholder="Pincode" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <div className="col-span-full flex gap-2">
+        <button onClick={() => onSave(user.id, f)} className="press flex-1 rounded-full bg-primary py-2 text-xs font-bold text-primary-foreground active:bg-primary-press"><Save className="mr-1 inline h-3.5 w-3.5" /> Save profile</button>
+        <button onClick={onCancel} className="press rounded-full border border-border bg-surface px-4 py-2 text-xs font-semibold active:bg-accent"><X className="h-3.5 w-3.5" /></button>
       </div>
     </div>
   );
