@@ -498,3 +498,143 @@ function UsersTab() {
     </div>
   );
 }
+
+function CouponEditCard({ coupon, onCancel, onSaved }: { coupon: any; onCancel: () => void; onSaved: () => void }) {
+  const toLocal = (iso: string | null) => (iso ? new Date(iso).toISOString().slice(0, 16) : "");
+  const [f, setF] = useState({
+    code: coupon.code ?? "", description: coupon.description ?? "", discount_type: coupon.discount_type ?? "percent",
+    value: String(coupon.value ?? ""), min_order: String(coupon.min_order ?? ""), max_discount: coupon.max_discount == null ? "" : String(coupon.max_discount),
+    usage_limit: coupon.usage_limit == null ? "" : String(coupon.usage_limit), expires_at: toLocal(coupon.expires_at), is_active: !!coupon.is_active,
+  });
+  async function save() {
+    const { error } = await supabase.from("coupons").update({
+      code: f.code.trim().toUpperCase(),
+      description: f.description || null,
+      discount_type: f.discount_type,
+      value: Number(f.value),
+      min_order: f.min_order ? Number(f.min_order) : 0,
+      max_discount: f.max_discount ? Number(f.max_discount) : null,
+      usage_limit: f.usage_limit ? Number(f.usage_limit) : null,
+      expires_at: f.expires_at ? new Date(f.expires_at).toISOString() : null,
+      is_active: f.is_active,
+    }).eq("id", coupon.id);
+    if (error) return toast.error(error.message);
+    toast.success("Coupon updated");
+    onSaved();
+  }
+  return (
+    <div className="grid gap-2 rounded-2xl border border-primary/50 bg-card p-3 sm:grid-cols-3">
+      <input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm uppercase" />
+      <select value={f.discount_type} onChange={(e) => setF({ ...f, discount_type: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
+        <option value="percent">Percent (%)</option>
+        <option value="flat">Flat (₹)</option>
+      </select>
+      <input type="number" value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Description" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-3" />
+      <input type="number" value={f.min_order} onChange={(e) => setF({ ...f, min_order: e.target.value })} placeholder="Min order ₹" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input type="number" value={f.max_discount} onChange={(e) => setF({ ...f, max_discount: e.target.value })} placeholder="Max discount ₹" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input type="number" value={f.usage_limit} onChange={(e) => setF({ ...f, usage_limit: e.target.value })} placeholder="Usage limit" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <input type="datetime-local" value={f.expires_at} onChange={(e) => setF({ ...f, expires_at: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-2" />
+      <label className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /> Active</label>
+      <div className="col-span-full flex gap-2">
+        <button onClick={save} className="press flex-1 rounded-full bg-primary py-2 text-xs font-bold text-primary-foreground active:bg-primary-press"><Save className="mr-1 inline h-3.5 w-3.5" /> Save changes</button>
+        <button onClick={onCancel} className="press rounded-full border border-border bg-surface px-4 py-2 text-xs font-semibold active:bg-accent"><X className="h-3.5 w-3.5" /></button>
+      </div>
+    </div>
+  );
+}
+
+const ROLES = ["customer", "kitchen", "delivery", "admin"] as const;
+
+function AuditTab() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [table, setTable] = useState("all");
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+
+  async function load() {
+    let query = supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(300);
+    if (table !== "all") query = query.eq("table_name", table);
+    const { data, error } = await query;
+    if (error) return toast.error(error.message);
+    setRows(data ?? []);
+  }
+  useEffect(() => {
+    load();
+    const ch = supabase.channel("admin-audit").on("postgres_changes", { event: "INSERT", schema: "public", table: "audit_logs" }, () => load()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [table]);
+
+  const filtered = rows.filter((r) => {
+    if (!q) return true;
+    const s = q.toLowerCase();
+    return (r.actor_email ?? "").toLowerCase().includes(s) || (r.table_name ?? "").includes(s) || (r.record_id ?? "").includes(s) || JSON.stringify(r.new_data ?? {}).toLowerCase().includes(s);
+  });
+
+  function changedFields(r: any): string[] {
+    if (r.action !== "update" || !r.old_data || !r.new_data) return [];
+    return Object.keys(r.new_data).filter((k) => JSON.stringify(r.old_data[k]) !== JSON.stringify(r.new_data[k]) && k !== "updated_at");
+  }
+
+  const LABEL: Record<string, string> = {
+    coupons: "Offer", profiles: "User", user_roles: "Role", menu_items: "Menu item", categories: "Category",
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by admin email, record, value…" className="min-w-0 flex-1 rounded-full border border-border bg-surface px-4 py-2 text-sm outline-none focus:border-primary" />
+        <select value={table} onChange={(e) => setTable(e.target.value)} className="rounded-full border border-border bg-surface px-3 py-2 text-sm">
+          <option value="all">All activity</option>
+          <option value="coupons">Offers</option>
+          <option value="profiles">Users</option>
+          <option value="user_roles">Roles</option>
+          <option value="menu_items">Menu</option>
+          <option value="categories">Categories</option>
+        </select>
+      </div>
+
+      {!filtered.length && <p className="py-16 text-center text-sm text-muted-foreground">No activity recorded yet.</p>}
+
+      <div className="space-y-2">
+        {filtered.map((r) => {
+          const fields = changedFields(r);
+          const expanded = open === r.id;
+          return (
+            <div key={r.id} className="rounded-2xl border border-border/60 bg-card p-3">
+              <button onClick={() => setOpen(expanded ? null : r.id)} className="flex w-full items-start gap-3 text-left">
+                <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-[10px] font-extrabold uppercase ${r.action === "insert" ? "bg-fresh text-fresh-foreground" : r.action === "delete" ? "bg-destructive text-destructive-foreground" : "bg-offer text-offer-foreground"}`}>
+                  {r.action === "insert" ? "NEW" : r.action === "delete" ? "DEL" : "EDIT"}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold">{LABEL[r.table_name] ?? r.table_name} {r.action === "insert" ? "created" : r.action === "delete" ? "deleted" : "updated"}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    by {r.actor_email ?? "system"} · {new Date(r.created_at).toLocaleString()}
+                    {fields.length ? ` · ${fields.join(", ")}` : ""}
+                  </span>
+                  <span className="block truncate text-[10px] text-muted-foreground">record {String(r.record_id ?? "—").slice(0, 8)}</span>
+                </span>
+              </button>
+              {expanded && (
+                <div className="mt-2 space-y-2 border-t border-border pt-2 text-xs">
+                  {r.action === "update" ? (
+                    fields.length ? fields.map((k) => (
+                      <div key={k} className="flex flex-wrap gap-1">
+                        <span className="font-semibold">{k}:</span>
+                        <span className="text-destructive line-through">{JSON.stringify(r.old_data[k])}</span>
+                        <span>→</span>
+                        <span className="text-fresh font-semibold">{JSON.stringify(r.new_data[k])}</span>
+                      </div>
+                    )) : <p className="text-muted-foreground">No field differences recorded.</p>
+                  ) : (
+                    <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-xl bg-surface p-2">{JSON.stringify(r.new_data ?? r.old_data, null, 2)}</pre>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
