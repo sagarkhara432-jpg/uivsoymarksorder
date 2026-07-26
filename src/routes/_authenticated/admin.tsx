@@ -395,6 +395,7 @@ function OffersTab() {
         {!rows.length && <p className="py-16 text-center text-sm text-muted-foreground">No coupons yet.</p>}
         {rows.map((c) => {
           const expired = c.expires_at && new Date(c.expires_at) < new Date();
+          if (editId === c.id) return <CouponEditCard key={c.id} coupon={c} onCancel={() => setEditId(null)} onSaved={() => { setEditId(null); load(); }} />;
           return (
             <div key={c.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-offer text-offer-foreground"><Tag className="h-4 w-4" /></div>
@@ -404,10 +405,12 @@ function OffersTab() {
               </div>
               {expired && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">Expired</span>}
               <button onClick={() => toggle(c.id, !c.is_active)} className={`press rounded-full px-2 py-1 text-[10px] font-bold ${c.is_active ? "bg-fresh text-fresh-foreground" : "bg-muted text-muted-foreground"}`}>{c.is_active ? "Active" : "Paused"}</button>
+              <button onClick={() => setEditId(c.id)} className="press grid h-8 w-8 place-items-center rounded-full active:bg-accent"><Pencil className="h-4 w-4" /></button>
               <button onClick={() => del(c.id)} className="press grid h-8 w-8 place-items-center rounded-full text-destructive active:bg-accent"><Trash2 className="h-4 w-4" /></button>
             </div>
           );
         })}
+
       </div>
     </div>
   );
