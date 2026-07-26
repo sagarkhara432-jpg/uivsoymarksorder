@@ -124,6 +124,10 @@ function MenuTab() {
   const [items, setItems] = useState<any[]>([]);
   const [cats, setCats] = useState<any[]>([]);
   const [form, setForm] = useState({ name: "", price: "", description: "", image_url: "", category_id: "", is_veg: true });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editCatId, setEditCatId] = useState<string | null>(null);
+  const [catForm, setCatForm] = useState({ name: "", emoji: "", sort_order: "" });
+
 
   async function load() {
     const [{ data: c }, { data: m }] = await Promise.all([
