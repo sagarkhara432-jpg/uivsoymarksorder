@@ -661,7 +661,7 @@ function AuditTab({ focusId }: { focusId?: string | null }) {
           const fields = changedFields(r);
           const expanded = open === r.id;
           return (
-            <div key={r.id} className="rounded-2xl border border-border/60 bg-card p-3">
+            <div key={r.id} id={`audit-${r.id}`} className={`rounded-2xl border bg-card p-3 ${focusId === r.id ? "border-primary ring-2 ring-primary/30" : "border-border/60"}`}>
               <button onClick={() => setOpen(expanded ? null : r.id)} className="flex w-full items-start gap-3 text-left">
                 <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-[10px] font-extrabold uppercase ${r.action === "insert" ? "bg-fresh text-fresh-foreground" : r.action === "delete" ? "bg-destructive text-destructive-foreground" : "bg-offer text-offer-foreground"}`}>
                   {r.action === "insert" ? "NEW" : r.action === "delete" ? "DEL" : "EDIT"}
