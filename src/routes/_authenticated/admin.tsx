@@ -85,7 +85,7 @@ function AdminPage() {
         {tab === "partners" && <PartnersTab />}
         {tab === "offers" && <OffersTab />}
         {tab === "users" && <UsersTab />}
-        {tab === "audit" && <AuditTab />}
+        {tab === "audit" && <AuditTab focusId={focusLog} />}
       </main>
 
     </div>
