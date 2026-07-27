@@ -77,7 +77,12 @@ export function useHighRiskAlerts(enabled: boolean, onSelect?: (a: RiskAlert) =>
       setAlerts((prev) => [...fresh, ...prev].slice(0, 50));
       if (notify) {
         setUnread((u) => u + fresh.length);
-        for (const a of fresh) toast.warning(a.title, { description: `${a.detail} · by ${a.actor}` });
+        for (const a of fresh)
+          toast.warning(a.title, {
+            description: `${a.detail} · by ${a.actor}`,
+            action: { label: "Details", onClick: () => selectRef.current?.(a) },
+          });
+
       }
     }
 
