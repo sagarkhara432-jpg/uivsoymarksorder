@@ -595,11 +595,22 @@ function CouponEditCard({ coupon, onCancel, onSaved }: { coupon: any; onCancel: 
 
 const ROLES = ["customer", "kitchen", "delivery", "admin"] as const;
 
-function AuditTab() {
+function AuditTab({ focusId }: { focusId?: string | null }) {
   const [rows, setRows] = useState<any[]>([]);
   const [table, setTable] = useState("all");
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(focusId ?? null);
+
+  useEffect(() => {
+    if (!focusId) return;
+    setTable("all");
+    setOpen(focusId);
+    const t = setTimeout(() => {
+      document.getElementById(`audit-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [focusId]);
+
 
   async function load() {
     let query = supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(300);
