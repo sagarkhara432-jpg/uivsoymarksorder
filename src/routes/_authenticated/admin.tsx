@@ -26,6 +26,8 @@ function AdminPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [email, setEmail] = useState<string>("");
   const [tab, setTab] = useState<Tab>("orders");
+  const [focusLog, setFocusLog] = useState<string | null>(null);
+
 
   useEffect(() => {
     (async () => {
