@@ -10,36 +10,40 @@ export type RiskAlert = {
   detail: string;
   actor: string;
   at: string;
+  row: any;
 };
 
+function base(row: any) {
+  return { id: row.id, actor: row.actor_email || "system", at: row.created_at as string, row };
+}
+
 function classify(row: any): RiskAlert | null {
-  const actor = row.actor_email || "system";
-  const at = row.created_at as string;
   const oldD = row.old_data ?? {};
   const newD = row.new_data ?? {};
 
   if (row.table_name === "user_roles") {
     if (row.action === "insert")
-      return { id: row.id, kind: "role", title: "Role granted", detail: `Role “${newD.role}” given to a user`, actor, at };
+      return { ...base(row), kind: "role", title: "Role granted", detail: `Role “${newD.role}” given to a user` };
     if (row.action === "delete")
-      return { id: row.id, kind: "role", title: "Role removed", detail: `Role “${oldD.role}” revoked from a user`, actor, at };
+      return { ...base(row), kind: "role", title: "Role removed", detail: `Role “${oldD.role}” revoked from a user` };
   }
 
   if (row.table_name === "coupons") {
     if (row.action === "insert")
-      return { id: row.id, kind: "coupon", title: "New coupon created", detail: `${newD.code} · ${newD.discount_type === "percent" ? `${newD.value}% off` : `₹${newD.value} off`}`, actor, at };
+      return { ...base(row), kind: "coupon", title: "New coupon created", detail: `${newD.code} · ${newD.discount_type === "percent" ? `${newD.value}% off` : `₹${newD.value} off`}` };
     if (row.action === "update" && oldD.is_active !== newD.is_active)
-      return { id: row.id, kind: "coupon", title: newD.is_active ? "Coupon activated" : "Coupon deactivated", detail: `${newD.code}`, actor, at };
+      return { ...base(row), kind: "coupon", title: newD.is_active ? "Coupon activated" : "Coupon deactivated", detail: `${newD.code}` };
   }
 
   if (row.table_name === "menu_items" && row.action === "update" && Number(oldD.price) !== Number(newD.price))
-    return { id: row.id, kind: "price", title: "Price changed", detail: `${newD.name}: ₹${oldD.price} → ₹${newD.price}`, actor, at };
+    return { ...base(row), kind: "price", title: "Price changed", detail: `${newD.name}: ₹${oldD.price} → ₹${newD.price}` };
 
   if (row.table_name === "profiles" && row.action === "update" && oldD.is_blocked !== newD.is_blocked)
-    return { id: row.id, kind: "block", title: newD.is_blocked ? "User blocked" : "User unblocked", detail: `${newD.email ?? newD.full_name ?? "user"}`, actor, at };
+    return { ...base(row), kind: "block", title: newD.is_blocked ? "User blocked" : "User unblocked", detail: `${newD.email ?? newD.full_name ?? "user"}` };
 
   return null;
 }
+
 
 const ICONS = {
   role: UserCog,
