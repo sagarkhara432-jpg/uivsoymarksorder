@@ -51,10 +51,12 @@ function AdminPage() {
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-destructive/10 text-destructive"><Shield className="h-7 w-7" /></div>
         <h1 className="mt-3 text-lg font-extrabold">Unauthorized access</h1>
         <p className="mt-1 text-sm text-muted-foreground">Signed in as <span className="font-semibold">{email || "unknown"}</span>. Only the master admin can access this panel.</p>
-        <div className="mt-4 flex justify-center gap-2">
-          <Link to="/" className="press rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground active:bg-primary-press">Home</Link>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Link to="/admin-login" className="press rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground active:bg-primary-press">Owner login</Link>
+          <Link to="/" className="press rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold active:bg-accent">Home</Link>
           <button onClick={signOut} className="press rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold active:bg-accent">Sign out</button>
         </div>
+
       </div>
     </div>
   );
