@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Bell, ShieldAlert, Tag, IndianRupee, UserCog, X } from "lucide-react";
+import { Bell, ShieldAlert, Tag, IndianRupee, UserCog, X, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type RiskAlert = {
@@ -10,36 +10,40 @@ export type RiskAlert = {
   detail: string;
   actor: string;
   at: string;
+  row: any;
 };
 
+function base(row: any) {
+  return { id: row.id, actor: row.actor_email || "system", at: row.created_at as string, row };
+}
+
 function classify(row: any): RiskAlert | null {
-  const actor = row.actor_email || "system";
-  const at = row.created_at as string;
   const oldD = row.old_data ?? {};
   const newD = row.new_data ?? {};
 
   if (row.table_name === "user_roles") {
     if (row.action === "insert")
-      return { id: row.id, kind: "role", title: "Role granted", detail: `Role “${newD.role}” given to a user`, actor, at };
+      return { ...base(row), kind: "role", title: "Role granted", detail: `Role “${newD.role}” given to a user` };
     if (row.action === "delete")
-      return { id: row.id, kind: "role", title: "Role removed", detail: `Role “${oldD.role}” revoked from a user`, actor, at };
+      return { ...base(row), kind: "role", title: "Role removed", detail: `Role “${oldD.role}” revoked from a user` };
   }
 
   if (row.table_name === "coupons") {
     if (row.action === "insert")
-      return { id: row.id, kind: "coupon", title: "New coupon created", detail: `${newD.code} · ${newD.discount_type === "percent" ? `${newD.value}% off` : `₹${newD.value} off`}`, actor, at };
+      return { ...base(row), kind: "coupon", title: "New coupon created", detail: `${newD.code} · ${newD.discount_type === "percent" ? `${newD.value}% off` : `₹${newD.value} off`}` };
     if (row.action === "update" && oldD.is_active !== newD.is_active)
-      return { id: row.id, kind: "coupon", title: newD.is_active ? "Coupon activated" : "Coupon deactivated", detail: `${newD.code}`, actor, at };
+      return { ...base(row), kind: "coupon", title: newD.is_active ? "Coupon activated" : "Coupon deactivated", detail: `${newD.code}` };
   }
 
   if (row.table_name === "menu_items" && row.action === "update" && Number(oldD.price) !== Number(newD.price))
-    return { id: row.id, kind: "price", title: "Price changed", detail: `${newD.name}: ₹${oldD.price} → ₹${newD.price}`, actor, at };
+    return { ...base(row), kind: "price", title: "Price changed", detail: `${newD.name}: ₹${oldD.price} → ₹${newD.price}` };
 
   if (row.table_name === "profiles" && row.action === "update" && oldD.is_blocked !== newD.is_blocked)
-    return { id: row.id, kind: "block", title: newD.is_blocked ? "User blocked" : "User unblocked", detail: `${newD.email ?? newD.full_name ?? "user"}`, actor, at };
+    return { ...base(row), kind: "block", title: newD.is_blocked ? "User blocked" : "User unblocked", detail: `${newD.email ?? newD.full_name ?? "user"}` };
 
   return null;
 }
+
 
 const ICONS = {
   role: UserCog,
@@ -48,10 +52,13 @@ const ICONS = {
   block: ShieldAlert,
 } as const;
 
-export function useHighRiskAlerts(enabled: boolean) {
+export function useHighRiskAlerts(enabled: boolean, onSelect?: (a: RiskAlert) => void) {
   const [alerts, setAlerts] = useState<RiskAlert[]>([]);
   const [unread, setUnread] = useState(0);
   const seen = useRef<Set<string>>(new Set());
+  const selectRef = useRef(onSelect);
+  selectRef.current = onSelect;
+
 
   useEffect(() => {
     if (!enabled) return;
@@ -70,7 +77,12 @@ export function useHighRiskAlerts(enabled: boolean) {
       setAlerts((prev) => [...fresh, ...prev].slice(0, 50));
       if (notify) {
         setUnread((u) => u + fresh.length);
-        for (const a of fresh) toast.warning(a.title, { description: `${a.detail} · by ${a.actor}` });
+        for (const a of fresh)
+          toast.warning(a.title, {
+            description: `${a.detail} · by ${a.actor}`,
+            action: { label: "Details", onClick: () => selectRef.current?.(a) },
+          });
+
       }
     }
 
@@ -100,8 +112,9 @@ export function useHighRiskAlerts(enabled: boolean) {
   return { alerts, unread, markRead: () => setUnread(0), clear: () => setAlerts([]) };
 }
 
-export function AlertsBell({ enabled }: { enabled: boolean }) {
-  const { alerts, unread, markRead, clear } = useHighRiskAlerts(enabled);
+export function AlertsBell({ enabled, onOpenAudit }: { enabled: boolean; onOpenAudit?: (logId: string) => void }) {
+  const [detail, setDetail] = useState<RiskAlert | null>(null);
+  const { alerts, unread, markRead, clear } = useHighRiskAlerts(enabled, (a) => setDetail(a));
   const [open, setOpen] = useState(false);
 
   return (
@@ -135,22 +148,132 @@ export function AlertsBell({ enabled }: { enabled: boolean }) {
               {alerts.map((a) => {
                 const Icon = ICONS[a.kind];
                 return (
-                  <div key={a.id} className="flex gap-2 border-b border-border/40 px-3 py-2 last:border-0">
-                    <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                  <button
+                    key={a.id}
+                    onClick={() => { setDetail(a); setOpen(false); }}
+                    className="flex w-full gap-2 border-b border-border/40 px-3 py-2 text-left last:border-0 active:bg-accent"
+                  >
+                    <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
                       <Icon className="h-3.5 w-3.5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold">{a.title}</p>
-                      <p className="truncate text-[11px] text-muted-foreground">{a.detail}</p>
-                      <p className="text-[10px] text-muted-foreground">{a.actor} · {new Date(a.at).toLocaleString()}</p>
-                    </div>
-                  </div>
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-xs font-bold">{a.title}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground">{a.detail}</span>
+                      <span className="block text-[10px] text-muted-foreground">{a.actor} · {new Date(a.at).toLocaleString()}</span>
+                    </span>
+                  </button>
                 );
               })}
             </div>
           </div>
         </>
       )}
+
+      {detail && (
+        <AlertDetailDrawer
+          alert={detail}
+          onClose={() => setDetail(null)}
+          onOpenAudit={onOpenAudit ? (id) => { setDetail(null); onOpenAudit(id); } : undefined}
+        />
+      )}
     </div>
   );
 }
+
+const HIDDEN_FIELDS = new Set(["id", "created_at", "updated_at"]);
+
+function fmt(v: any) {
+  if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+function AlertDetailDrawer({ alert, onClose, onOpenAudit }: { alert: RiskAlert; onClose: () => void; onOpenAudit?: (logId: string) => void }) {
+  const r = alert.row;
+  const oldD = r.old_data ?? {};
+  const newD = r.new_data ?? {};
+  const [subject, setSubject] = useState<string>("Loading…");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const d = { ...oldD, ...newD };
+      let label = "—";
+      if (r.table_name === "user_roles") {
+        const { data } = await supabase.from("profiles").select("full_name,email").eq("id", d.user_id).maybeSingle();
+        label = data ? `${data.full_name ?? "User"} · ${data.email ?? d.user_id}` : d.user_id;
+      } else if (r.table_name === "profiles") {
+        label = `${d.full_name ?? "User"} · ${d.email ?? r.record_id}`;
+      } else if (r.table_name === "coupons") {
+        label = `${d.code} — ${d.description ?? "coupon"}`;
+      } else if (r.table_name === "menu_items") {
+        label = `${d.name}`;
+      }
+      if (!cancelled) setSubject(label);
+    })();
+    return () => { cancelled = true; };
+  }, [r.id]);
+
+  const keys = Array.from(new Set([...Object.keys(oldD), ...Object.keys(newD)]))
+    .filter((k) => !HIDDEN_FIELDS.has(k))
+    .filter((k) => JSON.stringify(oldD[k]) !== JSON.stringify(newD[k]));
+
+  const KIND_LABEL: Record<RiskAlert["kind"], string> = {
+    role: "Role change", coupon: "Coupon", price: "Price change", block: "User access",
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60]">
+      <button aria-label="Close details" onClick={onClose} className="absolute inset-0 bg-black/50" />
+      <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 shadow-[var(--shadow-pop)] sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[26rem] sm:rounded-l-3xl sm:rounded-tr-none sm:border-l">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border sm:hidden" />
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-wide text-primary">{KIND_LABEL[alert.kind]}</p>
+            <h2 className="text-lg font-extrabold">{alert.title}</h2>
+            <p className="text-xs text-muted-foreground">{new Date(alert.at).toLocaleString()}</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="press grid h-8 w-8 place-items-center rounded-full border border-border bg-surface active:bg-accent"><X className="h-4 w-4" /></button>
+        </div>
+
+        <dl className="mt-4 space-y-2 rounded-2xl border border-border/60 bg-surface p-3 text-sm">
+          <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Affected</dt><dd className="text-right font-semibold">{subject}</dd></div>
+          <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Changed by</dt><dd className="text-right font-semibold">{alert.actor}</dd></div>
+          <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Action</dt><dd className="text-right font-semibold capitalize">{r.action}</dd></div>
+          <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Record</dt><dd className="truncate text-right font-mono text-[11px]">{r.record_id}</dd></div>
+        </dl>
+
+        <h3 className="mt-4 text-xs font-extrabold uppercase tracking-wide text-muted-foreground">Old vs new</h3>
+        <div className="mt-2 space-y-2">
+          {!keys.length && <p className="text-xs text-muted-foreground">No field-level differences recorded.</p>}
+          {keys.map((k) => (
+            <div key={k} className="rounded-2xl border border-border/60 bg-card p-2.5 text-xs">
+              <p className="font-bold capitalize">{k.replace(/_/g, " ")}</p>
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-destructive/10 px-2 py-1">
+                  <p className="text-[10px] uppercase text-muted-foreground">Old</p>
+                  <p className="break-words font-semibold">{fmt(oldD[k])}</p>
+                </div>
+                <div className="rounded-xl bg-fresh/15 px-2 py-1">
+                  <p className="text-[10px] uppercase text-muted-foreground">New</p>
+                  <p className="break-words font-semibold">{fmt(newD[k])}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {onOpenAudit && (
+          <button
+            onClick={() => onOpenAudit(r.id)}
+            className="press mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-2.5 text-sm font-bold text-primary-foreground active:bg-primary-press"
+          >
+            <ExternalLink className="h-4 w-4" /> Open in audit log
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+

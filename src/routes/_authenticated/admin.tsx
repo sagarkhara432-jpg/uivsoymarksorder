@@ -26,6 +26,8 @@ function AdminPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [email, setEmail] = useState<string>("");
   const [tab, setTab] = useState<Tab>("orders");
+  const [focusLog, setFocusLog] = useState<string | null>(null);
+
 
   useEffect(() => {
     (async () => {
@@ -49,10 +51,12 @@ function AdminPage() {
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-destructive/10 text-destructive"><Shield className="h-7 w-7" /></div>
         <h1 className="mt-3 text-lg font-extrabold">Unauthorized access</h1>
         <p className="mt-1 text-sm text-muted-foreground">Signed in as <span className="font-semibold">{email || "unknown"}</span>. Only the master admin can access this panel.</p>
-        <div className="mt-4 flex justify-center gap-2">
-          <Link to="/" className="press rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground active:bg-primary-press">Home</Link>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Link to="/admin-login" className="press rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground active:bg-primary-press">Owner login</Link>
+          <Link to="/" className="press rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold active:bg-accent">Home</Link>
           <button onClick={signOut} className="press rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold active:bg-accent">Sign out</button>
         </div>
+
       </div>
     </div>
   );
@@ -63,7 +67,7 @@ function AdminPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /><h1 className="font-extrabold">Master Admin</h1><span className="hidden text-[10px] font-semibold uppercase text-muted-foreground sm:inline">· {email}</span></div>
           <div className="flex items-center gap-2">
-            <AlertsBell enabled={isAdmin === true} />
+            <AlertsBell enabled={isAdmin === true} onOpenAudit={(id) => { setFocusLog(id); setTab("audit"); }} />
             <button onClick={signOut} className="press inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold active:bg-accent"><LogOut className="h-3.5 w-3.5" /> Sign out</button>
           </div>
 
@@ -83,7 +87,7 @@ function AdminPage() {
         {tab === "partners" && <PartnersTab />}
         {tab === "offers" && <OffersTab />}
         {tab === "users" && <UsersTab />}
-        {tab === "audit" && <AuditTab />}
+        {tab === "audit" && <AuditTab focusId={focusLog} />}
       </main>
 
     </div>
@@ -593,11 +597,22 @@ function CouponEditCard({ coupon, onCancel, onSaved }: { coupon: any; onCancel: 
 
 const ROLES = ["customer", "kitchen", "delivery", "admin"] as const;
 
-function AuditTab() {
+function AuditTab({ focusId }: { focusId?: string | null }) {
   const [rows, setRows] = useState<any[]>([]);
   const [table, setTable] = useState("all");
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(focusId ?? null);
+
+  useEffect(() => {
+    if (!focusId) return;
+    setTable("all");
+    setOpen(focusId);
+    const t = setTimeout(() => {
+      document.getElementById(`audit-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [focusId]);
+
 
   async function load() {
     let query = supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(300);
@@ -648,7 +663,7 @@ function AuditTab() {
           const fields = changedFields(r);
           const expanded = open === r.id;
           return (
-            <div key={r.id} className="rounded-2xl border border-border/60 bg-card p-3">
+            <div key={r.id} id={`audit-${r.id}`} className={`rounded-2xl border bg-card p-3 ${focusId === r.id ? "border-primary ring-2 ring-primary/30" : "border-border/60"}`}>
               <button onClick={() => setOpen(expanded ? null : r.id)} className="flex w-full items-start gap-3 text-left">
                 <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-[10px] font-extrabold uppercase ${r.action === "insert" ? "bg-fresh text-fresh-foreground" : r.action === "delete" ? "bg-destructive text-destructive-foreground" : "bg-offer text-offer-foreground"}`}>
                   {r.action === "insert" ? "NEW" : r.action === "delete" ? "DEL" : "EDIT"}
