@@ -5,6 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Shield, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { decideVerification } from "@/lib/admin.functions";
+import { AlertsBell } from "@/components/AdminAlerts";
+
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
