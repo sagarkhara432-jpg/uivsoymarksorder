@@ -52,10 +52,13 @@ const ICONS = {
   block: ShieldAlert,
 } as const;
 
-export function useHighRiskAlerts(enabled: boolean) {
+export function useHighRiskAlerts(enabled: boolean, onSelect?: (a: RiskAlert) => void) {
   const [alerts, setAlerts] = useState<RiskAlert[]>([]);
   const [unread, setUnread] = useState(0);
   const seen = useRef<Set<string>>(new Set());
+  const selectRef = useRef(onSelect);
+  selectRef.current = onSelect;
+
 
   useEffect(() => {
     if (!enabled) return;
