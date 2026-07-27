@@ -60,7 +60,11 @@ function AdminPage() {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /><h1 className="font-extrabold">Master Admin</h1><span className="hidden text-[10px] font-semibold uppercase text-muted-foreground sm:inline">· {email}</span></div>
-          <button onClick={signOut} className="press inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold active:bg-accent"><LogOut className="h-3.5 w-3.5" /> Sign out</button>
+          <div className="flex items-center gap-2">
+            <AlertsBell enabled={isAdmin === true} />
+            <button onClick={signOut} className="press inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold active:bg-accent"><LogOut className="h-3.5 w-3.5" /> Sign out</button>
+          </div>
+
         </div>
         <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2">
           <TabBtn active={tab==="orders"} onClick={() => setTab("orders")} icon={<ClipboardList className="h-4 w-4" />} label="Orders" />
