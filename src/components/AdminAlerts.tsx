@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Bell, ShieldAlert, Tag, IndianRupee, UserCog, X } from "lucide-react";
+import { Bell, ShieldAlert, Tag, IndianRupee, UserCog, X, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type RiskAlert = {
