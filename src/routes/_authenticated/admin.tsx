@@ -65,7 +65,7 @@ function AdminPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /><h1 className="font-extrabold">Master Admin</h1><span className="hidden text-[10px] font-semibold uppercase text-muted-foreground sm:inline">· {email}</span></div>
           <div className="flex items-center gap-2">
-            <AlertsBell enabled={isAdmin === true} />
+            <AlertsBell enabled={isAdmin === true} onOpenAudit={(id) => { setFocusLog(id); setTab("audit"); }} />
             <button onClick={signOut} className="press inline-flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold active:bg-accent"><LogOut className="h-3.5 w-3.5" /> Sign out</button>
           </div>
 
