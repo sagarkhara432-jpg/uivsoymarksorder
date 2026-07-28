@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SliderTestRouteImport } from './routes/slider-test'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -25,6 +26,11 @@ import { Route as AuthenticatedKitchenRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticated/delivery'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 
+const SliderTestRoute = SliderTestRouteImport.update({
+  id: '/slider-test',
+  path: '/slider-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/slider-test': typeof SliderTestRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/kitchen': typeof AuthenticatedKitchenRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/slider-test': typeof SliderTestRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/kitchen': typeof AuthenticatedKitchenRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/slider-test': typeof SliderTestRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/delivery': typeof AuthenticatedDeliveryRoute
   '/_authenticated/kitchen': typeof AuthenticatedKitchenRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/sitemap.xml'
+    | '/slider-test'
     | '/admin'
     | '/delivery'
     | '/kitchen'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/sitemap.xml'
+    | '/slider-test'
     | '/admin'
     | '/delivery'
     | '/kitchen'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/sitemap.xml'
+    | '/slider-test'
     | '/_authenticated/admin'
     | '/_authenticated/delivery'
     | '/_authenticated/kitchen'
@@ -213,12 +225,20 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PartnerRoute: typeof PartnerRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SliderTestRoute: typeof SliderTestRoute
   OrdersIdRoute: typeof OrdersIdRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/slider-test': {
+      id: '/slider-test'
+      path: '/slider-test'
+      fullPath: '/slider-test'
+      preLoaderRoute: typeof SliderTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -353,9 +373,20 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PartnerRoute: PartnerRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SliderTestRoute: SliderTestRoute,
   OrdersIdRoute: OrdersIdRoute,
   OrdersIndexRoute: OrdersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
