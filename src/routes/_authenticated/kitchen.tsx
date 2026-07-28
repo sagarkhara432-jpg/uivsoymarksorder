@@ -185,9 +185,6 @@ function KitchenPage() {
   );
 }
 
-function NextBtn({ onClick, label }: { onClick: () => void; label: string }) {
-  return <button onClick={onClick} className="press mt-3 w-full rounded-full bg-primary py-2 text-xs font-bold text-primary-foreground active:bg-primary-press">{label}</button>;
-}
 
 function PartnerOnboard({ role, status }: { role: "kitchen" | "delivery"; status: "none" | "pending" | "rejected" | "approved" }) {
   const [form, setForm] = useState({ full_name: "", phone: "", vehicle_number: "" });
