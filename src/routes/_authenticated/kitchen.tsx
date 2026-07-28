@@ -117,8 +117,7 @@ function KitchenPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <audio ref={audio} loop preload="auto" src="data:audio/wav;base64,UklGRlwEAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=" />
+    <div className="min-h-screen bg-background" onPointerDown={alarm.unlock}>
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
@@ -131,12 +130,19 @@ function KitchenPage() {
         </div>
       </header>
 
+      {alarm.needsUnlock && (
+        <button onClick={alarm.unlock} className="press mx-auto mt-3 flex max-w-5xl items-center gap-2 rounded-2xl bg-offer px-4 py-2 text-xs font-bold text-offer-foreground">
+          <Volume2 className="h-4 w-4" /> Tap once to enable order alarm sound
+        </button>
+      )}
+
       {alerting && (
         <div className="mx-auto mt-3 flex max-w-5xl items-center justify-between rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-[var(--shadow-pop)]">
-          <div className="flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4" /> New order incoming!</div>
+          <div className="flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4" /> New order incoming — alarm ringing</div>
           <button onClick={silence} className="press rounded-full bg-background px-3 py-1 text-xs font-bold text-foreground">Silence</button>
         </div>
       )}
+
 
       <main className="mx-auto grid max-w-5xl gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
         {!orders.length && <p className="col-span-full py-16 text-center text-sm text-muted-foreground">No active orders.</p>}
