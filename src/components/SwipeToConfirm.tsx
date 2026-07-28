@@ -110,7 +110,7 @@ export default function SwipeToConfirm({ label, onConfirm, tone = "primary", dis
         className={`absolute inset-y-0 left-0 ${t.fill}`}
         style={{
           width: `${x + 56}px`,
-          transition: dragging.current ? "none" : "width 260ms cubic-bezier(.22,1,.36,1)",
+          transition: dragging ? "none" : "width 260ms cubic-bezier(.22,1,.36,1)",
         }}
       />
 
@@ -136,7 +136,7 @@ export default function SwipeToConfirm({ label, onConfirm, tone = "primary", dis
       <div
         onPointerDown={(e) => {
           if (locked) return;
-          dragging.current = true;
+          setDragging(true);
           armed.current = false;
           startX.current = e.clientX - x;
           measure();
@@ -159,7 +159,7 @@ export default function SwipeToConfirm({ label, onConfirm, tone = "primary", dis
         className={`absolute top-1 left-1 grid h-12 w-12 cursor-grab touch-none place-items-center rounded-full bg-background shadow-[var(--shadow-pop)] active:cursor-grabbing ${t.knob}`}
         style={{
           transform: `translateX(${x}px)`,
-          transition: dragging.current ? "none" : "transform 260ms cubic-bezier(.22,1,.36,1)",
+          transition: dragging ? "none" : "transform 260ms cubic-bezier(.22,1,.36,1)",
         }}
       >
         {busy ? (
