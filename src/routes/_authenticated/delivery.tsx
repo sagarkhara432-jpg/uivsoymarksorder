@@ -2,9 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Bike, LogOut, MapPin, Navigation, Power } from "lucide-react";
+import { Bike, LogOut, MapPin, Navigation, Power, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { updateOrderStatus } from "@/lib/orders.functions";
+import SwipeToConfirm from "@/components/SwipeToConfirm";
+import { useOrderAlarm } from "@/hooks/use-order-alarm";
+
 
 export const Route = createFileRoute("/_authenticated/delivery")({
   head: () => ({
