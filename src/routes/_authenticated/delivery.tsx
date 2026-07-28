@@ -2,9 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Bike, LogOut, MapPin, Navigation, Power } from "lucide-react";
+import { Bike, LogOut, Navigation, Power, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { updateOrderStatus } from "@/lib/orders.functions";
+import SwipeToConfirm from "@/components/SwipeToConfirm";
+import { useOrderAlarm } from "@/hooks/use-order-alarm";
+
 
 export const Route = createFileRoute("/_authenticated/delivery")({
   head: () => ({
@@ -31,6 +34,9 @@ function DeliveryPage() {
   const [uid, setUid] = useState<string | null>(null);
   const posWatch = useRef<number | null>(null);
   const update = useServerFn(updateOrderStatus);
+  const alarm = useOrderAlarm();
+  const [ackedId, setAckedId] = useState<string | null>(null);
+
 
   useEffect(() => {
     (async () => {
@@ -84,11 +90,23 @@ function DeliveryPage() {
     toast.success(next ? "You're online" : "You're offline");
   }
 
+  // Ring persistently on a new assignment until the partner acknowledges it.
+  useEffect(() => {
+    if (status !== "approved") return;
+    if (order && order.id !== ackedId) {
+      alarm.start();
+      toast.warning("New delivery assigned! Slide to acknowledge", { duration: 8000 });
+    } else {
+      alarm.stop();
+    }
+  }, [order?.id, ackedId, status]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function advance(next: "out_for_delivery" | "delivered") {
     if (!order) return;
     try { await update({ data: { order_id: order.id, status: next } }); toast.success(`Order ${next.replace(/_/g, " ")}`); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); throw e; }
   }
+
 
   async function signOut() { await supabase.auth.signOut(); nav({ to: "/" }); }
 
@@ -98,7 +116,7 @@ function DeliveryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" onPointerDown={alarm.unlock}>
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2"><Bike className="h-5 w-5 text-primary" /><h1 className="font-extrabold">Delivery</h1></div>
@@ -110,6 +128,12 @@ function DeliveryPage() {
           </div>
         </div>
       </header>
+
+      {alarm.needsUnlock && (
+        <button onClick={alarm.unlock} className="press mx-auto mt-3 flex max-w-3xl items-center gap-2 rounded-2xl bg-offer px-4 py-2 text-xs font-bold text-offer-foreground">
+          <Volume2 className="h-4 w-4" /> Tap once to enable assignment alarm
+        </button>
+      )}
 
       <main className="mx-auto max-w-3xl space-y-3 p-4">
         {!order && <p className="rounded-2xl border border-dashed border-border/70 py-16 text-center text-sm text-muted-foreground">No active assignments. Stay online to receive orders.</p>}
@@ -131,9 +155,24 @@ function DeliveryPage() {
                     <Navigation className="h-3.5 w-3.5" /> Open in Maps
                   </a>
                 )}
-                {(order.status === "packed") && <button onClick={() => advance("out_for_delivery")} className="press rounded-full bg-orange px-3 py-1.5 text-xs font-bold text-orange-foreground active:brightness-90">Picked up</button>}
-                {(order.status === "out_for_delivery") && <button onClick={() => advance("delivered")} className="press rounded-full bg-fresh px-3 py-1.5 text-xs font-bold text-fresh-foreground active:brightness-90">Mark delivered</button>}
               </div>
+
+              {order.id !== ackedId && (
+                <SwipeToConfirm
+                  key={`ack-${order.id}`}
+                  label="Slide to Accept assignment"
+                  onConfirm={() => { setAckedId(order.id); alarm.stop(); toast.success("Assignment accepted"); }}
+                />
+              )}
+              {order.id === ackedId && order.status === "packed" && (
+                <SwipeToConfirm key={`pick-${order.id}`} tone="orange" label="Slide to Pick up Order" onConfirm={() => advance("out_for_delivery")} />
+              )}
+              {order.id === ackedId && order.status === "out_for_delivery" && (
+                <SwipeToConfirm key={`done-${order.id}`} tone="fresh" label="Slide to Complete Delivery" onConfirm={() => advance("delivered")} />
+              )}
+              {order.id === ackedId && order.status !== "packed" && order.status !== "out_for_delivery" && (
+                <p className="mt-3 rounded-full bg-muted py-2 text-center text-xs font-semibold text-muted-foreground">Waiting for kitchen to pack the order…</p>
+              )}
             </section>
 
             {order.lat && order.lng && <MiniMap lat={order.lat} lng={order.lng} />}
@@ -143,6 +182,7 @@ function DeliveryPage() {
     </div>
   );
 }
+
 
 function MiniMap({ lat, lng }: { lat: number; lng: number }) {
   const [Comp, setComp] = useState<any>(null);

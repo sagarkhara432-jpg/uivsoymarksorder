@@ -2,9 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ChefHat, LogOut } from "lucide-react";
+import { AlertTriangle, ChefHat, LogOut, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { acceptOrder, updateOrderStatus } from "@/lib/orders.functions";
+import SwipeToConfirm from "@/components/SwipeToConfirm";
+import { useOrderAlarm } from "@/hooks/use-order-alarm";
+
 
 export const Route = createFileRoute("/_authenticated/kitchen")({
   head: () => ({
@@ -29,10 +32,11 @@ function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [prep, setPrep] = useState<Record<string, number>>({});
   const [alerting, setAlerting] = useState(false);
-  const audio = useRef<HTMLAudioElement | null>(null);
+  const alarm = useOrderAlarm();
   const knownIds = useRef<Set<string>>(new Set());
   const accept = useServerFn(acceptOrder);
   const update = useServerFn(updateOrderStatus);
+
 
   useEffect(() => {
     async function check() {
@@ -77,15 +81,23 @@ function KitchenPage() {
     return () => { supabase.removeChannel(ch); };
   }, [verifiedOrPending]);
 
+  // Alarm stays on while any order is still un-accepted, even after a refresh.
+  useEffect(() => {
+    if (verifiedOrPending !== "approved") return;
+    const pending = orders.some((o) => o.status === "placed");
+    setAlerting(pending);
+    if (pending) alarm.start();
+    else alarm.stop();
+  }, [orders, verifiedOrPending]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function fireAlert() {
     setAlerting(true);
-    try { audio.current?.play(); } catch {}
-    toast.warning("New order! 🔔", { duration: 6000 });
+    alarm.start();
+    toast.warning("New order! 🔔 Slide to accept to stop the alarm", { duration: 8000 });
   }
   function silence() {
     setAlerting(false);
-    audio.current?.pause();
-    if (audio.current) audio.current.currentTime = 0;
+    alarm.stop();
   }
 
   async function doAccept(id: string) {
@@ -96,13 +108,15 @@ function KitchenPage() {
       toast.success(`Accepted · ${mins} min prep`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
+      throw e;
     }
   }
 
   async function advance(id: string, next: "preparing" | "packed" | "out_for_delivery") {
     try { await update({ data: { order_id: id, status: next } }); toast.success(`Marked ${next.replace(/_/g, " ")}`); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); throw e; }
   }
+
 
   async function signOut() { await supabase.auth.signOut(); nav({ to: "/" }); }
 
@@ -113,8 +127,7 @@ function KitchenPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <audio ref={audio} loop preload="auto" src="data:audio/wav;base64,UklGRlwEAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=" />
+    <div className="min-h-screen bg-background" onPointerDown={alarm.unlock}>
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
@@ -127,12 +140,19 @@ function KitchenPage() {
         </div>
       </header>
 
+      {alarm.needsUnlock && (
+        <button onClick={alarm.unlock} className="press mx-auto mt-3 flex max-w-5xl items-center gap-2 rounded-2xl bg-offer px-4 py-2 text-xs font-bold text-offer-foreground">
+          <Volume2 className="h-4 w-4" /> Tap once to enable order alarm sound
+        </button>
+      )}
+
       {alerting && (
         <div className="mx-auto mt-3 flex max-w-5xl items-center justify-between rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-[var(--shadow-pop)]">
-          <div className="flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4" /> New order incoming!</div>
+          <div className="flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4" /> New order incoming — alarm ringing</div>
           <button onClick={silence} className="press rounded-full bg-background px-3 py-1 text-xs font-bold text-foreground">Silence</button>
         </div>
       )}
+
 
       <main className="mx-auto grid max-w-5xl gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
         {!orders.length && <p className="col-span-full py-16 text-center text-sm text-muted-foreground">No active orders.</p>}
@@ -151,12 +171,13 @@ function KitchenPage() {
               <div className="mt-3 space-y-2">
                 <label className="text-xs font-semibold">Prep time (mins)</label>
                 <input type="number" min={5} max={120} defaultValue={20} onChange={(e) => setPrep({ ...prep, [o.id]: Number(e.target.value) })} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm" />
-                <button onClick={() => doAccept(o.id)} className="press w-full rounded-full bg-fresh py-2 text-xs font-bold text-fresh-foreground active:brightness-90">Accept</button>
+                <SwipeToConfirm tone="fresh" label="Slide to Accept" onConfirm={() => doAccept(o.id)} />
               </div>
             )}
-            {o.status === "accepted" && <NextBtn onClick={() => advance(o.id, "preparing")} label="Start preparing" />}
-            {o.status === "preparing" && <NextBtn onClick={() => advance(o.id, "packed")} label="Mark packed" />}
-            {o.status === "packed" && <NextBtn onClick={() => advance(o.id, "out_for_delivery")} label="Hand to rider" />}
+            {o.status === "accepted" && <SwipeToConfirm label="Slide to Start preparing" onConfirm={() => advance(o.id, "preparing")} />}
+            {o.status === "preparing" && <SwipeToConfirm tone="orange" label="Slide to Mark packed" onConfirm={() => advance(o.id, "packed")} />}
+            {o.status === "packed" && <SwipeToConfirm label="Slide to Hand to rider" onConfirm={() => advance(o.id, "out_for_delivery")} />}
+
           </article>
         ))}
       </main>
@@ -164,9 +185,6 @@ function KitchenPage() {
   );
 }
 
-function NextBtn({ onClick, label }: { onClick: () => void; label: string }) {
-  return <button onClick={onClick} className="press mt-3 w-full rounded-full bg-primary py-2 text-xs font-bold text-primary-foreground active:bg-primary-press">{label}</button>;
-}
 
 function PartnerOnboard({ role, status }: { role: "kitchen" | "delivery"; status: "none" | "pending" | "rejected" | "approved" }) {
   const [form, setForm] = useState({ full_name: "", phone: "", vehicle_number: "" });
