@@ -26,8 +26,8 @@ function haptic(ms: number | number[]) {
 export default function SwipeToConfirm({ label, onConfirm, tone = "primary", disabled }: Props) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const startX = useRef(0);
-  const dragging = useRef(false);
   const armed = useRef(false);
+  const [dragging, setDragging] = useState(false);
   const [x, setX] = useState(0);
   const [max, setMax] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -61,9 +61,10 @@ export default function SwipeToConfirm({ label, onConfirm, tone = "primary", dis
   }, [onConfirm]);
 
   useEffect(() => {
-    if (!dragging.current) return;
-    const move = (clientX: number) => {
-      const next = Math.min(max, Math.max(0, clientX - startX.current));
+    if (!dragging) return;
+    const clamp = (clientX: number) => Math.min(max, Math.max(0, clientX - startX.current));
+    const onMove = (e: PointerEvent) => {
+      const next = clamp(e.clientX);
       setX(next);
       if (!armed.current && next > max * 0.55) {
         armed.current = true;
@@ -71,20 +72,16 @@ export default function SwipeToConfirm({ label, onConfirm, tone = "primary", dis
       }
       if (armed.current && next < max * 0.4) armed.current = false;
     };
-    const onMove = (e: PointerEvent) => move(e.clientX);
     const onUp = (e: PointerEvent) => {
-      dragging.current = false;
-      const next = Math.min(max, Math.max(0, e.clientX - startX.current));
-      if (next >= max - 4) {
+      setDragging(false);
+      armed.current = false;
+      const next = clamp(e.clientX);
+      if (next >= max - 6) {
         setX(max);
         void finish();
       } else {
         setX(0);
       }
-      armed.current = false;
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -94,7 +91,8 @@ export default function SwipeToConfirm({ label, onConfirm, tone = "primary", dis
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  });
+  }, [dragging, max, finish]);
+
 
   const pct = max ? x / max : 0;
   const locked = disabled || busy || done;
