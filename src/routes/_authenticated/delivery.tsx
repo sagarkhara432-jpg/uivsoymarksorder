@@ -90,11 +90,23 @@ function DeliveryPage() {
     toast.success(next ? "You're online" : "You're offline");
   }
 
+  // Ring persistently on a new assignment until the partner acknowledges it.
+  useEffect(() => {
+    if (status !== "approved") return;
+    if (order && order.id !== ackedId) {
+      alarm.start();
+      toast.warning("New delivery assigned! Slide to acknowledge", { duration: 8000 });
+    } else {
+      alarm.stop();
+    }
+  }, [order?.id, ackedId, status]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function advance(next: "out_for_delivery" | "delivered") {
     if (!order) return;
     try { await update({ data: { order_id: order.id, status: next } }); toast.success(`Order ${next.replace(/_/g, " ")}`); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); throw e; }
   }
+
 
   async function signOut() { await supabase.auth.signOut(); nav({ to: "/" }); }
 
