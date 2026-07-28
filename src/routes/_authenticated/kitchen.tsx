@@ -83,14 +83,14 @@ function KitchenPage() {
 
   function fireAlert() {
     setAlerting(true);
-    try { audio.current?.play(); } catch {}
-    toast.warning("New order! 🔔", { duration: 6000 });
+    alarm.start();
+    toast.warning("New order! 🔔 Slide to accept to stop the alarm", { duration: 8000 });
   }
   function silence() {
     setAlerting(false);
-    audio.current?.pause();
-    if (audio.current) audio.current.currentTime = 0;
+    alarm.stop();
   }
+
 
   async function doAccept(id: string) {
     const mins = prep[id] || 20;
