@@ -161,12 +161,13 @@ function KitchenPage() {
               <div className="mt-3 space-y-2">
                 <label className="text-xs font-semibold">Prep time (mins)</label>
                 <input type="number" min={5} max={120} defaultValue={20} onChange={(e) => setPrep({ ...prep, [o.id]: Number(e.target.value) })} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm" />
-                <button onClick={() => doAccept(o.id)} className="press w-full rounded-full bg-fresh py-2 text-xs font-bold text-fresh-foreground active:brightness-90">Accept</button>
+                <SwipeToConfirm tone="fresh" label="Slide to Accept" onConfirm={() => doAccept(o.id)} />
               </div>
             )}
-            {o.status === "accepted" && <NextBtn onClick={() => advance(o.id, "preparing")} label="Start preparing" />}
-            {o.status === "preparing" && <NextBtn onClick={() => advance(o.id, "packed")} label="Mark packed" />}
-            {o.status === "packed" && <NextBtn onClick={() => advance(o.id, "out_for_delivery")} label="Hand to rider" />}
+            {o.status === "accepted" && <SwipeToConfirm label="Slide to Start preparing" onConfirm={() => advance(o.id, "preparing")} />}
+            {o.status === "preparing" && <SwipeToConfirm tone="orange" label="Slide to Mark packed" onConfirm={() => advance(o.id, "packed")} />}
+            {o.status === "packed" && <SwipeToConfirm label="Slide to Hand to rider" onConfirm={() => advance(o.id, "out_for_delivery")} />}
+
           </article>
         ))}
       </main>
