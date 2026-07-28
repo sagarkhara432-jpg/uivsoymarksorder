@@ -32,10 +32,11 @@ function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [prep, setPrep] = useState<Record<string, number>>({});
   const [alerting, setAlerting] = useState(false);
-  const audio = useRef<HTMLAudioElement | null>(null);
+  const alarm = useOrderAlarm();
   const knownIds = useRef<Set<string>>(new Set());
   const accept = useServerFn(acceptOrder);
   const update = useServerFn(updateOrderStatus);
+
 
   useEffect(() => {
     async function check() {
