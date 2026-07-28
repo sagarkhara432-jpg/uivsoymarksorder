@@ -81,6 +81,15 @@ function KitchenPage() {
     return () => { supabase.removeChannel(ch); };
   }, [verifiedOrPending]);
 
+  // Alarm stays on while any order is still un-accepted, even after a refresh.
+  useEffect(() => {
+    if (verifiedOrPending !== "approved") return;
+    const pending = orders.some((o) => o.status === "placed");
+    setAlerting(pending);
+    if (pending) alarm.start();
+    else alarm.stop();
+  }, [orders, verifiedOrPending]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function fireAlert() {
     setAlerting(true);
     alarm.start();
@@ -91,7 +100,6 @@ function KitchenPage() {
     alarm.stop();
   }
 
-
   async function doAccept(id: string) {
     const mins = prep[id] || 20;
     try {
@@ -100,13 +108,15 @@ function KitchenPage() {
       toast.success(`Accepted · ${mins} min prep`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
+      throw e;
     }
   }
 
   async function advance(id: string, next: "preparing" | "packed" | "out_for_delivery") {
     try { await update({ data: { order_id: id, status: next } }); toast.success(`Marked ${next.replace(/_/g, " ")}`); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); throw e; }
   }
+
 
   async function signOut() { await supabase.auth.signOut(); nav({ to: "/" }); }
 
