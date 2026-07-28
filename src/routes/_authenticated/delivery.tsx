@@ -34,6 +34,9 @@ function DeliveryPage() {
   const [uid, setUid] = useState<string | null>(null);
   const posWatch = useRef<number | null>(null);
   const update = useServerFn(updateOrderStatus);
+  const alarm = useOrderAlarm();
+  const [ackedId, setAckedId] = useState<string | null>(null);
+
 
   useEffect(() => {
     (async () => {
