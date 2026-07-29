@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasDb, query } from "./db";
+import { hasDb, query, queryScalar } from "./db";
 
 /**
  * Regression tests for the two security findings:
@@ -21,10 +21,9 @@ function policies() {
 }
 
 function triggerFunctionSource(): string {
-  const rows = query(
+  return queryScalar(
     `select pg_get_functiondef('public.enforce_order_update_rules()'::regprocedure)`,
   );
-  return rows[0][0];
 }
 
 d("orders update trigger is installed", () => {

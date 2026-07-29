@@ -12,3 +12,8 @@ export function query(sql: string): string[][] {
 }
 
 export const hasDb = Boolean(process.env.PGHOST);
+
+/** Runs a read-only SQL query expected to return exactly one (possibly multi-line) value. */
+export function queryScalar(sql: string): string {
+  return execFileSync("psql", ["-At", "-c", sql], { encoding: "utf8" });
+}
