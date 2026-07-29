@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hasDb, query, queryScalar } from "./db";
+import { cover, printCoverageSummary } from "./rls-coverage";
 
 /**
  * Regression tests for the two security findings:
@@ -72,6 +73,7 @@ d("orders_customer_writeall regression", () => {
       );
     }
     expect(src).toMatch(/RAISE EXCEPTION 'Order pricing, address and identity fields cannot be modified'/);
+    cover("guard:Order pricing, address and identity fields cannot be modified");
   });
 
   it("only lets a customer cancel an order that is still 'placed'", () => {
@@ -79,6 +81,7 @@ d("orders_customer_writeall regression", () => {
     expect(src).toContain("auth.uid() = OLD.customer_id");
     expect(src).toMatch(/NEW\.status <> 'cancelled' OR OLD\.status <> 'placed'/);
     expect(src).toMatch(/RAISE EXCEPTION 'Customers may only cancel a placed order'/);
+    cover("guard:Customers may only cancel a placed order");
   });
 
   it("blocks customers from touching workflow columns", () => {
@@ -86,6 +89,7 @@ d("orders_customer_writeall regression", () => {
     expect(src).toMatch(
       /RAISE EXCEPTION 'Customers may only change order status to cancelled'/,
     );
+    cover("guard:Customers may only change order status to cancelled");
   });
 
   it("keeps the customer cancel policy scoped in both USING and WITH CHECK", () => {
@@ -96,6 +100,7 @@ d("orders_customer_writeall regression", () => {
     expect(p!.qual).toContain("'placed'::order_status");
     expect(p!.check).toContain("auth.uid() = customer_id");
     expect(p!.check).toContain("'cancelled'::order_status");
+    cover("policy:orders_customer_cancel");
   });
 
   it("has no broad customer ALL/UPDATE policy on orders", () => {
@@ -104,12 +109,14 @@ d("orders_customer_writeall regression", () => {
       const wideOpen = p.cmd === "ALL" && !p.qual.includes("auth.uid()") && !p.qual.includes("has_role");
       expect(wideOpen, `policy ${name} is unrestricted`).toBe(false);
     }
+    cover("policy:orders_admin_all");
   });
 
   it("falls through to a deny for anyone else", () => {
     expect(triggerFunctionSource()).toMatch(
       /RAISE EXCEPTION 'Not allowed to update this order'/,
     );
+    cover("guard:Not allowed to update this order");
   });
 });
 
@@ -123,6 +130,7 @@ d("orders_kitchen_update_unrestricted regression", () => {
     for (const col of ["partner_id", "out_for_delivery_at", "delivered_at"]) {
       expect(src).toContain(`NEW.${col} IS DISTINCT FROM OLD.${col}`);
     }
+    cover("guard:Kitchen staff may not change delivery assignment or delivery timestamps");
   });
 
   it("restricts kitchen status transitions to the kitchen workflow", () => {
@@ -141,6 +149,7 @@ d("orders_kitchen_update_unrestricted regression", () => {
     // kitchen must never be allowed to jump to delivery states
     expect(p!.check).not.toContain("'out_for_delivery'::order_status");
     expect(p!.check).not.toContain("'delivered'::order_status");
+    cover("policy:orders_kitchen_update", "guard:Invalid status transition for kitchen staff");
   });
 
   it("restricts delivery partners to their own orders and delivery statuses", () => {
@@ -156,6 +165,11 @@ d("orders_kitchen_update_unrestricted regression", () => {
     expect(p!.qual).toContain("partner_id = auth.uid()");
     expect(p!.check).toContain("'out_for_delivery'::order_status");
     expect(p!.check).toContain("'delivered'::order_status");
+    cover(
+      "policy:orders_delivery_update",
+      "guard:Delivery partners may only update delivery status",
+      "guard:Invalid status transition for delivery partner",
+    );
   });
 });
 
@@ -174,5 +188,13 @@ d("orders table hardening", () => {
     );
     const writes = rows.map((r) => r[0]).filter((p) => p !== "SELECT");
     expect(writes).toEqual([]);
+  });
+});
+
+d("security-invariant coverage summary", () => {
+  it("covers every live orders UPDATE policy and trigger guard", () => {
+    const { pct, missed } = printCoverageSummary();
+    expect(missed, `uncovered security rules: ${missed.join(", ")}`).toEqual([]);
+    expect(pct).toBe(100);
   });
 });
