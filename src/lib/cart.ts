@@ -7,6 +7,8 @@ export type CartItem = {
   image_url: string | null;
   is_veg: boolean;
   qty: number;
+  notes?: string;
+  restaurant_id?: string | null;
 };
 
 const KEY = "uivso_cart_v1";
@@ -60,6 +62,10 @@ export const cart = {
     if (it.qty <= 0) items = items.filter((i) => i.id !== id);
     write(items);
   },
+  setNotes(id: string, notes: string) {
+    const items = read().map((i) => (i.id === id ? { ...i, notes: notes.slice(0, 200) } : i));
+    write(items);
+  },
   remove(id: string) {
     write(read().filter((i) => i.id !== id));
   },
@@ -76,11 +82,7 @@ export const cart = {
 
 const EMPTY: CartItem[] = [];
 export function useCart() {
-  return useSyncExternalStore(
-    cart.subscribe,
-    read,
-    () => EMPTY,
-  );
+  return useSyncExternalStore(cart.subscribe, read, () => EMPTY);
 }
 
 export function cartTotals(items: CartItem[]) {

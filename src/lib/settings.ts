@@ -1,0 +1,130 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+export type AppSettings = {
+  id: string;
+  app_name: string;
+  logo_url: string | null;
+  splash_url: string | null;
+  download_url: string | null;
+  delivery_radius_km: number;
+  base_delivery_fee: number;
+  free_delivery_over: number;
+  tax_percent: number;
+  rider_payout_per_order: number;
+  service_enabled: boolean;
+  service_message: string | null;
+};
+
+export type Banner = {
+  id: string;
+  title: string | null;
+  subtitle: string | null;
+  image_url: string;
+  link_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type Restaurant = {
+  id: string;
+  name: string;
+  description: string | null;
+  phone: string | null;
+  address_line: string | null;
+  city: string | null;
+  pincode: string | null;
+  lat: number | null;
+  lng: number | null;
+  logo_url: string | null;
+  cover_url: string | null;
+  is_open: boolean;
+};
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+/** Live app branding + commerce settings. Any admin edit lands here instantly. */
+export function useAppSettings() {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      supabase
+        .from("app_settings")
+        .select("*")
+        .eq("id", "global")
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!alive) return;
+          setSettings((data as AppSettings) ?? null);
+          setLoading(false);
+        });
+    load();
+    const ch = supabase
+      .channel(`app-settings-${uid()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, () => load())
+      .subscribe();
+    return () => {
+      alive = false;
+      supabase.removeChannel(ch);
+    };
+  }, []);
+
+  return { settings, loading };
+}
+
+export function useBanners(activeOnly = true) {
+  const [banners, setBanners] = useState<Banner[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      let q = supabase.from("banners").select("*").order("sort_order");
+      if (activeOnly) q = q.eq("is_active", true);
+      const { data } = await q;
+      if (alive) setBanners((data as Banner[]) ?? []);
+    };
+    load();
+    const ch = supabase
+      .channel(`banners-${uid()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "banners" }, () => load())
+      .subscribe();
+    return () => {
+      alive = false;
+      supabase.removeChannel(ch);
+    };
+  }, [activeOnly]);
+  return banners;
+}
+
+export function useRestaurants() {
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const { data } = await supabase.from("restaurants").select("*").order("created_at");
+      if (alive) setRestaurants((data as Restaurant[]) ?? []);
+    };
+    load();
+    const ch = supabase
+      .channel(`restaurants-${uid()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "restaurants" }, () => load())
+      .subscribe();
+    return () => {
+      alive = false;
+      supabase.removeChannel(ch);
+    };
+  }, []);
+  return restaurants;
+}
+
+/** Pricing preview used by cart/checkout — mirrors the authoritative server maths. */
+export function quote(subtotal: number, s: AppSettings | null) {
+  const base = Number(s?.base_delivery_fee ?? 29);
+  const freeOver = Number(s?.free_delivery_over ?? 400);
+  const taxPct = Number(s?.tax_percent ?? 5);
+  const delivery = subtotal <= 0 || subtotal >= freeOver ? 0 : base;
+  const tax = Math.round(subtotal * (taxPct / 100) * 100) / 100;
+  return { delivery, tax, taxPct, total: subtotal + delivery + tax };
+}

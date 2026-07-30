@@ -17,11 +17,14 @@ export type Database = {
       addresses: {
         Row: {
           address_line: string
+          building: string | null
           city: string | null
           created_at: string
+          house_no: string | null
           id: string
           is_default: boolean
           label: string | null
+          landmark: string | null
           lat: number | null
           lng: number | null
           phone: string
@@ -30,11 +33,14 @@ export type Database = {
         }
         Insert: {
           address_line: string
+          building?: string | null
           city?: string | null
           created_at?: string
+          house_no?: string | null
           id?: string
           is_default?: boolean
           label?: string | null
+          landmark?: string | null
           lat?: number | null
           lng?: number | null
           phone: string
@@ -43,16 +49,67 @@ export type Database = {
         }
         Update: {
           address_line?: string
+          building?: string | null
           city?: string | null
           created_at?: string
+          house_no?: string | null
           id?: string
           is_default?: boolean
           label?: string | null
+          landmark?: string | null
           lat?: number | null
           lng?: number | null
           phone?: string
           pincode?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          app_name: string
+          base_delivery_fee: number
+          delivery_radius_km: number
+          download_url: string | null
+          free_delivery_over: number
+          id: string
+          logo_url: string | null
+          rider_payout_per_order: number
+          service_enabled: boolean
+          service_message: string | null
+          splash_url: string | null
+          tax_percent: number
+          updated_at: string
+        }
+        Insert: {
+          app_name?: string
+          base_delivery_fee?: number
+          delivery_radius_km?: number
+          download_url?: string | null
+          free_delivery_over?: number
+          id?: string
+          logo_url?: string | null
+          rider_payout_per_order?: number
+          service_enabled?: boolean
+          service_message?: string | null
+          splash_url?: string | null
+          tax_percent?: number
+          updated_at?: string
+        }
+        Update: {
+          app_name?: string
+          base_delivery_fee?: number
+          delivery_radius_km?: number
+          download_url?: string | null
+          free_delivery_over?: number
+          id?: string
+          logo_url?: string | null
+          rider_payout_per_order?: number
+          service_enabled?: boolean
+          service_message?: string | null
+          splash_url?: string | null
+          tax_percent?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -89,6 +146,42 @@ export type Database = {
           old_data?: Json | null
           record_id?: string | null
           table_name?: string
+        }
+        Relationships: []
+      }
+      banners: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          is_active: boolean
+          link_url: string | null
+          sort_order: number
+          subtitle: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          link_url?: string | null
+          sort_order?: number
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -192,6 +285,7 @@ export type Database = {
       }
       menu_items: {
         Row: {
+          admin_notes: string | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -201,10 +295,13 @@ export type Database = {
           is_bestseller: boolean
           is_veg: boolean
           name: string
+          out_of_stock: boolean
           price: number
+          restaurant_id: string | null
           updated_at: string
         }
         Insert: {
+          admin_notes?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -214,10 +311,13 @@ export type Database = {
           is_bestseller?: boolean
           is_veg?: boolean
           name: string
+          out_of_stock?: boolean
           price: number
+          restaurant_id?: string | null
           updated_at?: string
         }
         Update: {
+          admin_notes?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -227,7 +327,9 @@ export type Database = {
           is_bestseller?: boolean
           is_veg?: boolean
           name?: string
+          out_of_stock?: boolean
           price?: number
+          restaurant_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -238,14 +340,23 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "menu_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       order_items: {
         Row: {
           created_at: string
           id: string
+          image_url: string | null
           menu_item_id: string | null
           name: string
+          notes: string | null
           order_id: string
           price: number
           qty: number
@@ -253,8 +364,10 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          image_url?: string | null
           menu_item_id?: string | null
           name: string
+          notes?: string | null
           order_id: string
           price: number
           qty: number
@@ -262,8 +375,10 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          image_url?: string | null
           menu_item_id?: string | null
           name?: string
+          notes?: string | null
           order_id?: string
           price?: number
           qty?: number
@@ -285,10 +400,73 @@ export type Database = {
           },
         ]
       }
+      order_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          order_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          order_id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_pins: {
+        Row: {
+          created_at: string
+          customer_id: string
+          order_id: string
+          pin: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          order_id: string
+          pin: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          order_id?: string
+          pin?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_pins_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           accepted_at: string | null
           address_line: string
+          address_tag: string | null
+          building: string | null
           city: string | null
           created_at: string
           customer_id: string
@@ -297,7 +475,9 @@ export type Database = {
           delivery_fee: number
           discount: number
           first_order_discount: boolean
+          house_no: string | null
           id: string
+          landmark: string | null
           lat: number | null
           lng: number | null
           out_for_delivery_at: string | null
@@ -307,14 +487,20 @@ export type Database = {
           pincode: string | null
           placed_at: string
           prep_time_mins: number | null
+          ready_at: string | null
+          restaurant_id: string | null
+          rider_payout: number
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
+          tax: number
           total: number
           updated_at: string
         }
         Insert: {
           accepted_at?: string | null
           address_line: string
+          address_tag?: string | null
+          building?: string | null
           city?: string | null
           created_at?: string
           customer_id: string
@@ -323,7 +509,9 @@ export type Database = {
           delivery_fee?: number
           discount?: number
           first_order_discount?: boolean
+          house_no?: string | null
           id?: string
+          landmark?: string | null
           lat?: number | null
           lng?: number | null
           out_for_delivery_at?: string | null
@@ -333,14 +521,20 @@ export type Database = {
           pincode?: string | null
           placed_at?: string
           prep_time_mins?: number | null
+          ready_at?: string | null
+          restaurant_id?: string | null
+          rider_payout?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal: number
+          tax?: number
           total: number
           updated_at?: string
         }
         Update: {
           accepted_at?: string | null
           address_line?: string
+          address_tag?: string | null
+          building?: string | null
           city?: string | null
           created_at?: string
           customer_id?: string
@@ -349,7 +543,9 @@ export type Database = {
           delivery_fee?: number
           discount?: number
           first_order_discount?: boolean
+          house_no?: string | null
           id?: string
+          landmark?: string | null
           lat?: number | null
           lng?: number | null
           out_for_delivery_at?: string | null
@@ -359,12 +555,24 @@ export type Database = {
           pincode?: string | null
           placed_at?: string
           prep_time_mins?: number | null
+          ready_at?: string | null
+          restaurant_id?: string | null
+          rider_payout?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
+          tax?: number
           total?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       partner_status: {
         Row: {
@@ -392,8 +600,10 @@ export type Database = {
       }
       partner_verifications: {
         Row: {
+          aadhaar_path: string | null
           admin_notes: string | null
           created_at: string
+          dl_path: string | null
           full_name: string
           id: string
           id_proof_path: string
@@ -405,8 +615,10 @@ export type Database = {
           vehicle_number: string | null
         }
         Insert: {
+          aadhaar_path?: string | null
           admin_notes?: string | null
           created_at?: string
+          dl_path?: string | null
           full_name: string
           id?: string
           id_proof_path: string
@@ -418,8 +630,10 @@ export type Database = {
           vehicle_number?: string | null
         }
         Update: {
+          aadhaar_path?: string | null
           admin_notes?: string | null
           created_at?: string
+          dl_path?: string | null
           full_name?: string
           id?: string
           id_proof_path?: string
@@ -429,6 +643,36 @@ export type Database = {
           updated_at?: string
           user_id?: string
           vehicle_number?: string | null
+        }
+        Relationships: []
+      }
+      payout_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          note: string | null
+          partner_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          partner_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          partner_id?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -483,6 +727,89 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurants: {
+        Row: {
+          address_line: string | null
+          city: string | null
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_open: boolean
+          lat: number | null
+          lng: number | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          pincode: string | null
+          updated_at: string
+        }
+        Insert: {
+          address_line?: string | null
+          city?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_open?: boolean
+          lat?: number | null
+          lng?: number | null
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          pincode?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address_line?: string | null
+          city?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_open?: boolean
+          lat?: number | null
+          lng?: number | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          pincode?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rider_earnings: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          order_id: string | null
+          partner_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          partner_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          partner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_earnings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -514,6 +841,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      verify_delivery_pin: {
+        Args: { _order_id: string; _pin: string }
         Returns: boolean
       }
     }
