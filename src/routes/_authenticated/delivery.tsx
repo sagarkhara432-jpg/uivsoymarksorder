@@ -184,6 +184,48 @@ function DeliveryPage() {
   );
 }
 
+/** Rider enters the customer's 4-digit code to close out the delivery. */
+function PinComplete({ orderId }: { orderId: string }) {
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  const complete = useServerFn(completeDelivery);
+
+  async function submit() {
+    if (!/^\d{4}$/.test(pin)) return toast.error("Enter the 4-digit code from the customer");
+    setBusy(true);
+    try {
+      const res = await complete({ data: { order_id: orderId, pin } });
+      toast.success(`Delivered! ₹${res.earned} added to your earnings`);
+      setPin("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 space-y-2 rounded-2xl border border-fresh/40 bg-fresh/5 p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-fresh">Ask the customer for their delivery code</p>
+      <input
+        inputMode="numeric"
+        maxLength={4}
+        value={pin}
+        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+        placeholder="••••"
+        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-center text-2xl font-black tracking-[0.4em] outline-none focus:border-primary"
+      />
+      <button
+        onClick={submit}
+        disabled={busy || pin.length !== 4}
+        className="press w-full rounded-full bg-fresh py-3 text-sm font-bold text-fresh-foreground disabled:opacity-50"
+      >
+        {busy ? "Verifying…" : "Complete delivery"}
+      </button>
+    </div>
+  );
+}
+
 
 function MiniMap({ lat, lng }: { lat: number; lng: number }) {
   const [Comp, setComp] = useState<any>(null);
