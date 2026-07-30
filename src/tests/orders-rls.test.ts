@@ -133,6 +133,16 @@ d("orders_kitchen_update_unrestricted regression", () => {
     cover("guard:Kitchen staff may not change delivery assignment or delivery timestamps");
   });
 
+  it("whitelists the only columns kitchen staff may change", () => {
+    const src = triggerFunctionSource();
+    expect(src).toContain("to_jsonb(NEW) - 'status' - 'prep_time_mins' - 'accepted_at' - 'packed_at' - 'updated_at'");
+    expect(src).toMatch(
+      /RAISE EXCEPTION 'Kitchen staff may only change order status and preparation fields'/,
+    );
+    cover("guard:Kitchen staff may only change order status and preparation fields");
+  });
+
+
   it("restricts kitchen status transitions to the kitchen workflow", () => {
     const src = triggerFunctionSource();
     expect(src).toMatch(
