@@ -168,8 +168,9 @@ function DeliveryPage() {
                 <SwipeToConfirm key={`pick-${order.id}`} tone="orange" label="Slide to Pick up Order" onConfirm={() => advance("out_for_delivery")} />
               )}
               {order.id === ackedId && order.status === "out_for_delivery" && (
-                <SwipeToConfirm key={`done-${order.id}`} tone="fresh" label="Slide to Complete Delivery" onConfirm={() => advance("delivered")} />
+                <PinComplete orderId={order.id} />
               )}
+
               {order.id === ackedId && order.status !== "packed" && order.status !== "out_for_delivery" && (
                 <p className="mt-3 rounded-full bg-muted py-2 text-center text-xs font-semibold text-muted-foreground">Waiting for kitchen to pack the order…</p>
               )}
