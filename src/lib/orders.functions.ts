@@ -78,7 +78,16 @@ export const placeOrder = createServerFn({ method: "POST" })
     if (iErr) throw new Error(iErr.message);
 
     if (first_order_discount) {
-      await supabase.from("first_order_flags").insert({ user_id: userId, order_id: order.id });
+      const { error: fErr } = await supabase
+        .from("first_order_flags")
+        .insert({ user_id: userId, order_id: order.id });
+      if (fErr) {
+        // The discount could not be locked (already used, or write rejected):
+        // roll the order back so the discount can never be reused.
+        await supabase.from("order_items").delete().eq("order_id", order.id);
+        await supabase.from("orders").delete().eq("id", order.id);
+        throw new Error("Could not apply the first-order discount. Please try again.");
+      }
     }
 
     return { order_id: order.id };
