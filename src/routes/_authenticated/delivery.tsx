@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { Bike, LogOut, Navigation, Power, Volume2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { updateOrderStatus } from "@/lib/orders.functions";
+import { completeDelivery, updateOrderStatus } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
 
