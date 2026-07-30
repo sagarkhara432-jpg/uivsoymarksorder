@@ -38,17 +38,16 @@ export const placeOrder = createServerFn({ method: "POST" })
     const subtotal = orderItems.reduce((s, i) => s + i.price * i.qty, 0);
     const delivery_fee = subtotal >= 400 ? 0 : 29;
 
-    // First-order discount lock
-    const { data: flag } = await supabase
-      .from("first_order_flags")
-      .select("user_id")
-      .eq("user_id", userId)
-      .maybeSingle();
+    // First-order discount lock: claim the flag BEFORE pricing the order.
+    // The unique constraint on user_id makes this a single-use reservation,
+    // so a failed insert means the discount was already consumed.
     let discount = 0;
     let first_order_discount = false;
-    if (!flag) {
-      discount = Math.round(subtotal * 0.5 * 100) / 100;
-      if (discount > 150) discount = 150;
+    const { error: claimErr } = await supabase
+      .from("first_order_flags")
+      .insert({ user_id: userId });
+    if (!claimErr) {
+      discount = Math.min(150, Math.round(subtotal * 0.5 * 100) / 100);
       first_order_discount = true;
     }
     const total = Math.max(0, subtotal - discount) + delivery_fee;
@@ -77,18 +76,6 @@ export const placeOrder = createServerFn({ method: "POST" })
       .insert(orderItems.map((i) => ({ ...i, order_id: order.id })));
     if (iErr) throw new Error(iErr.message);
 
-    if (first_order_discount) {
-      const { error: fErr } = await supabase
-        .from("first_order_flags")
-        .insert({ user_id: userId, order_id: order.id });
-      if (fErr) {
-        // The discount could not be locked (already used, or write rejected):
-        // roll the order back so the discount can never be reused.
-        await supabase.from("order_items").delete().eq("order_id", order.id);
-        await supabase.from("orders").delete().eq("id", order.id);
-        throw new Error("Could not apply the first-order discount. Please try again.");
-      }
-    }
 
     return { order_id: order.id };
   });
