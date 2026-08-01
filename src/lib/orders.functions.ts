@@ -72,15 +72,21 @@ export const placeOrder = createServerFn({ method: "POST" })
     const tax = Math.round(subtotal * (taxPct / 100) * 100) / 100;
 
     // First-order discount lock: claim the flag BEFORE pricing the order.
-    // The unique constraint on user_id makes this a single-use reservation,
-    // so a failed insert means the discount was already consumed.
+    // The unique constraint on user_id makes this a single-use reservation, so
+    // only a successful insert may grant the discount. A duplicate-key error
+    // (23505) means it was already consumed; any other error is unexpected and
+    // must abort the order rather than silently changing the price.
     let discount = 0;
     let first_order_discount = false;
     const { error: claimErr } = await supabase.from("first_order_flags").insert({ user_id: userId });
+    if (claimErr && claimErr.code !== "23505") {
+      throw new Error("Could not verify first-order offer. Please try again.");
+    }
     if (!claimErr) {
       discount = Math.min(150, Math.round(subtotal * 0.5 * 100) / 100);
       first_order_discount = true;
     }
+
     const total = Math.round((Math.max(0, subtotal - discount) + delivery_fee + tax) * 100) / 100;
 
     const { data: order, error: oErr } = await supabase
