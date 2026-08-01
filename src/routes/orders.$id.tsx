@@ -215,35 +215,9 @@ function etaFor(o: Order) {
 }
 
 function TrackMap({ lat, lng }: { lat: number; lng: number }) {
-  const [mods, setMods] = useState<any>(null);
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const [rl, L] = await Promise.all([import("react-leaflet"), import("leaflet")]);
-      L.Icon.Default.mergeOptions({
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-      });
-      if (alive) setMods(rl);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
-  if (!mods) return <div className="grid h-52 place-items-center rounded-2xl bg-muted text-sm text-muted-foreground">Loading map…</div>;
-  const { MapContainer, TileLayer, Marker, Popup } = mods;
-  return (
-    <div className="overflow-hidden rounded-2xl border border-border/60">
-      <MapContainer center={[lat, lng]} zoom={15} style={{ height: 220, width: "100%" }}>
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-        <Marker position={[lat, lng]}>
-          <Popup>Your delivery address</Popup>
-        </Marker>
-      </MapContainer>
-    </div>
-  );
+  return <LeafletMap lat={lat} lng={lng} zoom={15} height={220} popup="Your delivery address" />;
 }
+
 
 function Row({ label, value, tone }: { label: string; value: string; tone?: "fresh" }) {
   return (
