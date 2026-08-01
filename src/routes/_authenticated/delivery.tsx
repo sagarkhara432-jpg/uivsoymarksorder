@@ -60,7 +60,7 @@ function DeliveryPage() {
   const update = useServerFn(updateOrderStatus);
   const alarm = useOrderAlarm();
   const [ackedId, setAckedId] = useState<string | null>(null);
-  const { restaurants } = useRestaurants();
+  const restaurants = useRestaurants();
 
   const pickup = useMemo(
     () => restaurants.find((r) => r.id === order?.restaurant_id) ?? restaurants[0] ?? null,
