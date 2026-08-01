@@ -12,4 +12,21 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          // Keep leaflet/react-leaflet in their own chunk. Otherwise they get merged into a
+          // shared vendor chunk that every SSR route imports statically, and leaflet touches
+          // `window` at module scope → "window is not defined" 500s during SSR.
+          manualChunks(id: string) {
+            if (/node_modules[/\\](leaflet|react-leaflet|@react-leaflet)[/\\]/.test(id)) {
+              return "leaflet-vendor";
+            }
+          },
+        },
+      },
+    },
+  },
 });
+
