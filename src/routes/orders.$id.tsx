@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/auth";
 import OrderChat from "@/components/OrderChat";
 import MediaImage from "@/components/MediaImage";
+import LeafletMap from "@/components/LeafletMap";
+
 
 export const Route = createFileRoute("/orders/$id")({
   head: ({ params }) => ({
