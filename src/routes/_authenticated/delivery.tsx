@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { completeDelivery, updateOrderStatus } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
+import LeafletMap from "@/components/LeafletMap";
+
 
 
 export const Route = createFileRoute("/_authenticated/delivery")({
