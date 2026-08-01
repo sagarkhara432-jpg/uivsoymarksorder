@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { completeDelivery, updateOrderStatus } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
+import LeafletMap from "@/components/LeafletMap";
+
 
 
 export const Route = createFileRoute("/_authenticated/delivery")({
@@ -228,33 +230,9 @@ function PinComplete({ orderId }: { orderId: string }) {
 
 
 function MiniMap({ lat, lng }: { lat: number; lng: number }) {
-  const [Comp, setComp] = useState<any>(null);
-  useEffect(() => {
-    (async () => {
-      const [{ MapContainer, TileLayer, Marker, Popup }, L] = await Promise.all([
-        import("react-leaflet"),
-        import("leaflet"),
-      ]);
-      // fix default marker icons
-      L.Icon.Default.mergeOptions({
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-      });
-      setComp({ MapContainer, TileLayer, Marker, Popup });
-    })();
-  }, []);
-  if (!Comp) return <div className="grid h-64 place-items-center rounded-2xl bg-muted text-sm text-muted-foreground">Loading map…</div>;
-  const { MapContainer, TileLayer, Marker, Popup } = Comp;
-  return (
-    <div className="overflow-hidden rounded-2xl border border-border/60">
-      <MapContainer center={[lat, lng]} zoom={15} style={{ height: 300, width: "100%" }}>
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-        <Marker position={[lat, lng]}><Popup>Delivery destination</Popup></Marker>
-      </MapContainer>
-    </div>
-  );
+  return <LeafletMap lat={lat} lng={lng} zoom={15} height={300} popup="Delivery destination" />;
 }
+
 
 function Onboard({ status }: { status: "none" | "pending" | "rejected" | "approved" }) {
   if (status === "pending") return <SimpleCard title="Awaiting approval" body="Your ID is under review by admin." />;
