@@ -239,7 +239,7 @@ function KitchenPage() {
                 <div className="mt-2 flex items-center justify-between text-sm">
                   <span className="font-bold">₹{Number(o.total).toFixed(0)}</span>
                   <span className="text-[11px] text-muted-foreground">
-                    {o.payment_method === "cod" ? "COD" : "Prepaid"} · payout ₹{split.kitchen.toFixed(0)}
+                    {o.payment_method === "cod" ? "COD" : "Prepaid"} · payout ₹{split.payout.toFixed(0)}
                   </span>
                 </div>
 
@@ -324,10 +324,10 @@ function KitchenEarnings({ orders, fallbackPct }: { orders: Order[]; fallbackPct
     (acc, o) => {
       const split = commissionSplit(Number(o.subtotal ?? 0), o.commission_percent ?? fallbackPct);
       acc.commission += split.commission;
-      acc.kitchen += split.kitchen;
+      acc.payout += split.payout;
       return acc;
     },
-    { commission: 0, kitchen: 0 },
+    { commission: 0, payout: 0 },
   );
 
   return (
@@ -336,7 +336,7 @@ function KitchenEarnings({ orders, fallbackPct }: { orders: Order[]; fallbackPct
         <Stat label="Today's orders" value={String(orders.length)} />
         <Stat label="Completed" value={String(completed.length)} />
         <Stat label="Gross revenue" value={`₹${gross.toFixed(0)}`} />
-        <Stat label="Net payout" value={`₹${totals.kitchen.toFixed(0)}`} tone />
+        <Stat label="Net payout" value={`₹${totals.payout.toFixed(0)}`} tone />
       </div>
       <p className="rounded-2xl border border-border/60 bg-card p-3 text-xs text-muted-foreground">
         App commission deducted today: <span className="font-extrabold text-foreground">₹{totals.commission.toFixed(0)}</span>
@@ -356,7 +356,7 @@ function KitchenEarnings({ orders, fallbackPct }: { orders: Order[]; fallbackPct
               <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
                 <span>Item total ₹{Number(o.subtotal ?? 0).toFixed(0)}</span>
                 <span>Commission {pct}% (−₹{split.commission.toFixed(0)})</span>
-                <span className="font-extrabold text-fresh">Payout ₹{split.kitchen.toFixed(0)}</span>
+                <span className="font-extrabold text-fresh">Payout ₹{split.payout.toFixed(0)}</span>
               </div>
             </div>
           );
