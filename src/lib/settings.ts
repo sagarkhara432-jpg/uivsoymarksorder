@@ -14,6 +14,22 @@ export type AppSettings = {
   rider_payout_per_order: number;
   service_enabled: boolean;
   service_message: string | null;
+  primary_color: string;
+  accent_color: string;
+  splash_bg_color: string;
+  checkout_theme_color: string;
+  qr_logo_url: string | null;
+  upi_id: string | null;
+  upi_holder_name: string | null;
+  upi_merchant_name: string | null;
+  upi_qr_url: string | null;
+  payment_online_enabled: boolean;
+  payment_cod_enabled: boolean;
+  payment_card_enabled: boolean;
+  per_km_rate: number;
+  rider_incentive_amount: number;
+  rider_incentive_km: number;
+  commission_percent: number;
 };
 
 export type Banner = {
@@ -24,7 +40,13 @@ export type Banner = {
   link_url: string | null;
   sort_order: number;
   is_active: boolean;
+  is_sponsored: boolean;
+  impressions: number;
+  clicks: number;
+  menu_item_id: string | null;
+  restaurant_id: string | null;
 };
+
 
 export type Restaurant = {
   id: string;
@@ -39,6 +61,7 @@ export type Restaurant = {
   logo_url: string | null;
   cover_url: string | null;
   is_open: boolean;
+  is_sponsored: boolean;
 };
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -127,4 +150,15 @@ export function quote(subtotal: number, s: AppSettings | null) {
   const delivery = subtotal <= 0 || subtotal >= freeOver ? 0 : base;
   const tax = Math.round(subtotal * (taxPct / 100) * 100) / 100;
   return { delivery, tax, taxPct, total: subtotal + delivery + tax };
+}
+
+/** Count a banner view or click for the admin ad-analytics panel. */
+export function bumpBanner(bannerId: string, kind: "view" | "click") {
+  void supabase.rpc("bump_banner_metric", { _banner_id: bannerId, _kind: kind });
+}
+
+/** Commission split preview used by the kitchen earnings dashboard. */
+export function commissionSplit(subtotal: number, percent: number) {
+  const commission = Math.round(subtotal * (percent / 100) * 100) / 100;
+  return { commission, payout: Math.round((subtotal - commission) * 100) / 100 };
 }

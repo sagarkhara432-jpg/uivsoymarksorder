@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Minus, Plus, Trash2, ArrowLeft } from "lucide-react";
 import { useCart, cart, cartTotals } from "@/lib/cart";
+import CartRecommendations from "@/components/CartRecommendations";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({
@@ -71,6 +72,8 @@ function CartPage() {
             <p className="mt-2 text-[11px] text-fresh">First order? 50% off (up to ₹150) applies automatically at checkout.</p>
           </div>
         )}
+
+        {count > 0 && <CartRecommendations />}
       </main>
 
       {count > 0 && (

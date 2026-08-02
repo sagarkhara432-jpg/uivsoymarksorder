@@ -9,6 +9,7 @@ import { placeOrder } from "@/lib/orders.functions";
 import { useSession } from "@/lib/auth";
 import { useAppSettings, quote } from "@/lib/settings";
 import LocationPicker from "@/components/LocationPicker";
+import PaymentSheet, { type PaymentMethod } from "@/components/PaymentSheet";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -44,6 +45,7 @@ function CheckoutPage() {
     address_tag: "Home" as (typeof TAGS)[number],
   });
   const [coords, setCoords] = useState<{ lat?: number; lng?: number }>({});
+  const [payOpen, setPayOpen] = useState(false);
   const place = useServerFn(placeOrder);
 
   useEffect(() => {
@@ -76,12 +78,17 @@ function CheckoutPage() {
 
   const { delivery, tax, taxPct, total } = quote(subtotal, settings ?? null);
 
-  async function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
     if (count === 0) return toast.error("Cart is empty");
     if (!form.name || !form.phone || !form.address_line) return toast.error("Please fill name, phone and address");
     if (!form.house_no.trim()) return toast.error("House / flat number is required for delivery");
     if (coords.lat == null || coords.lng == null) return toast.error("Please drop your location pin on the map");
+    // Payment method is picked before the order is written.
+    setPayOpen(true);
+  }
+
+  async function confirmOrder(payment_method: PaymentMethod) {
     setBusy(true);
     try {
       const res = await place({
@@ -99,6 +106,7 @@ function CheckoutPage() {
           customer_name: form.name,
           lat: coords.lat,
           lng: coords.lng,
+          payment_method,
         },
       });
       cart.clear();
@@ -108,6 +116,7 @@ function CheckoutPage() {
       toast.error(err instanceof Error ? err.message : "Failed to place order");
     } finally {
       setBusy(false);
+      setPayOpen(false);
     }
   }
 
@@ -221,11 +230,24 @@ function CheckoutPage() {
         <button
           type="submit"
           disabled={busy || count === 0}
-          className="press fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-md items-center justify-center rounded-2xl bg-primary py-3.5 text-sm font-bold text-primary-foreground shadow-[var(--shadow-pop)] active:bg-primary-press disabled:opacity-60"
+          className="press fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-md items-center justify-center rounded-2xl py-3.5 text-sm font-bold shadow-[var(--shadow-pop)] disabled:opacity-60"
+          style={{
+            background: "var(--checkout-bar, var(--primary))",
+            color: "var(--checkout-bar-foreground, var(--primary-foreground))",
+          }}
         >
-          {busy ? "Placing order…" : `Place order · ₹${total.toFixed(0)}`}
+          {busy ? "Placing order…" : `Continue to payment · ₹${total.toFixed(0)}`}
         </button>
       </form>
+
+      <PaymentSheet
+        open={payOpen}
+        total={total}
+        settings={settings ?? null}
+        busy={busy}
+        onClose={() => setPayOpen(false)}
+        onConfirm={confirmOrder}
+      />
     </div>
   );
 }

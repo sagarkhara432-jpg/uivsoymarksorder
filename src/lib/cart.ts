@@ -19,7 +19,8 @@ function read(): CartItem[] {
   const raw = localStorage.getItem(KEY) || "[]";
   if (raw !== cached.raw) {
     try {
-      cached = { raw, items: JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      cached = { raw, items: Array.isArray(parsed) ? parsed : [] };
     } catch {
       cached = { raw, items: [] };
     }
@@ -27,44 +28,47 @@ function read(): CartItem[] {
   return cached.items;
 }
 
-let listeners = new Set<() => void>();
+const listeners = new Set<() => void>();
 function emit() {
   listeners.forEach((l) => l());
 }
 
+/**
+ * Every write stores a brand-new array. useSyncExternalStore bails out when the
+ * snapshot reference is unchanged, so mutating in place made the cart bar only
+ * appear after a refresh.
+ */
 function write(items: CartItem[]) {
-  const raw = JSON.stringify(items);
-  localStorage.setItem(KEY, raw);
-  cached = { raw, items };
+  const next = items.map((i) => ({ ...i }));
+  const raw = JSON.stringify(next);
+  if (typeof window !== "undefined") localStorage.setItem(KEY, raw);
+  cached = { raw, items: next };
   emit();
 }
 
 export const cart = {
   get: read,
-  add(item: Omit<CartItem, "qty">) {
+  add(item: Omit<CartItem, "qty">, qty = 1) {
     const items = read();
-    const existing = items.find((i) => i.id === item.id);
-    if (existing) existing.qty += 1;
-    else items.push({ ...item, qty: 1 });
-    write(items);
+    const exists = items.some((i) => i.id === item.id);
+    write(
+      exists
+        ? items.map((i) => (i.id === item.id ? { ...i, qty: i.qty + qty } : i))
+        : [...items, { ...item, qty }],
+    );
   },
   inc(id: string) {
-    const items = read();
-    const it = items.find((i) => i.id === id);
-    if (it) it.qty += 1;
-    write(items);
+    write(read().map((i) => (i.id === id ? { ...i, qty: i.qty + 1 } : i)));
   },
   dec(id: string) {
-    let items = read();
-    const it = items.find((i) => i.id === id);
-    if (!it) return;
-    it.qty -= 1;
-    if (it.qty <= 0) items = items.filter((i) => i.id !== id);
-    write(items);
+    write(
+      read()
+        .map((i) => (i.id === id ? { ...i, qty: i.qty - 1 } : i))
+        .filter((i) => i.qty > 0),
+    );
   },
   setNotes(id: string, notes: string) {
-    const items = read().map((i) => (i.id === id ? { ...i, notes: notes.slice(0, 200) } : i));
-    write(items);
+    write(read().map((i) => (i.id === id ? { ...i, notes: notes.slice(0, 200) } : i)));
   },
   remove(id: string) {
     write(read().filter((i) => i.id !== id));
