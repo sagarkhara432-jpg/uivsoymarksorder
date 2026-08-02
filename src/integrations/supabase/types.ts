@@ -67,49 +67,97 @@ export type Database = {
       }
       app_settings: {
         Row: {
+          accent_color: string
           app_name: string
           base_delivery_fee: number
+          checkout_theme_color: string
+          commission_percent: number
           delivery_radius_km: number
           download_url: string | null
           free_delivery_over: number
           id: string
           logo_url: string | null
+          payment_card_enabled: boolean
+          payment_cod_enabled: boolean
+          payment_online_enabled: boolean
+          per_km_rate: number
+          primary_color: string
+          qr_logo_url: string | null
+          rider_incentive_amount: number
+          rider_incentive_km: number
           rider_payout_per_order: number
           service_enabled: boolean
           service_message: string | null
+          splash_bg_color: string
           splash_url: string | null
           tax_percent: number
           updated_at: string
+          upi_holder_name: string | null
+          upi_id: string | null
+          upi_merchant_name: string | null
+          upi_qr_url: string | null
         }
         Insert: {
+          accent_color?: string
           app_name?: string
           base_delivery_fee?: number
+          checkout_theme_color?: string
+          commission_percent?: number
           delivery_radius_km?: number
           download_url?: string | null
           free_delivery_over?: number
           id?: string
           logo_url?: string | null
+          payment_card_enabled?: boolean
+          payment_cod_enabled?: boolean
+          payment_online_enabled?: boolean
+          per_km_rate?: number
+          primary_color?: string
+          qr_logo_url?: string | null
+          rider_incentive_amount?: number
+          rider_incentive_km?: number
           rider_payout_per_order?: number
           service_enabled?: boolean
           service_message?: string | null
+          splash_bg_color?: string
           splash_url?: string | null
           tax_percent?: number
           updated_at?: string
+          upi_holder_name?: string | null
+          upi_id?: string | null
+          upi_merchant_name?: string | null
+          upi_qr_url?: string | null
         }
         Update: {
+          accent_color?: string
           app_name?: string
           base_delivery_fee?: number
+          checkout_theme_color?: string
+          commission_percent?: number
           delivery_radius_km?: number
           download_url?: string | null
           free_delivery_over?: number
           id?: string
           logo_url?: string | null
+          payment_card_enabled?: boolean
+          payment_cod_enabled?: boolean
+          payment_online_enabled?: boolean
+          per_km_rate?: number
+          primary_color?: string
+          qr_logo_url?: string | null
+          rider_incentive_amount?: number
+          rider_incentive_km?: number
           rider_payout_per_order?: number
           service_enabled?: boolean
           service_message?: string | null
+          splash_bg_color?: string
           splash_url?: string | null
           tax_percent?: number
           updated_at?: string
+          upi_holder_name?: string | null
+          upi_id?: string | null
+          upi_merchant_name?: string | null
+          upi_qr_url?: string | null
         }
         Relationships: []
       }
@@ -151,39 +199,69 @@ export type Database = {
       }
       banners: {
         Row: {
+          clicks: number
           created_at: string
           id: string
           image_url: string
+          impressions: number
           is_active: boolean
+          is_sponsored: boolean
           link_url: string | null
+          menu_item_id: string | null
+          restaurant_id: string | null
           sort_order: number
           subtitle: string | null
           title: string | null
           updated_at: string
         }
         Insert: {
+          clicks?: number
           created_at?: string
           id?: string
           image_url: string
+          impressions?: number
           is_active?: boolean
+          is_sponsored?: boolean
           link_url?: string | null
+          menu_item_id?: string | null
+          restaurant_id?: string | null
           sort_order?: number
           subtitle?: string | null
           title?: string | null
           updated_at?: string
         }
         Update: {
+          clicks?: number
           created_at?: string
           id?: string
           image_url?: string
+          impressions?: number
           is_active?: boolean
+          is_sponsored?: boolean
           link_url?: string | null
+          menu_item_id?: string | null
+          restaurant_id?: string | null
           sort_order?: number
           subtitle?: string | null
           title?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "banners_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banners_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -293,6 +371,7 @@ export type Database = {
           image_url: string | null
           is_available: boolean
           is_bestseller: boolean
+          is_sponsored: boolean
           is_veg: boolean
           name: string
           out_of_stock: boolean
@@ -309,6 +388,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           is_bestseller?: boolean
+          is_sponsored?: boolean
           is_veg?: boolean
           name: string
           out_of_stock?: boolean
@@ -325,6 +405,7 @@ export type Database = {
           image_url?: string | null
           is_available?: boolean
           is_bestseller?: boolean
+          is_sponsored?: boolean
           is_veg?: boolean
           name?: string
           out_of_stock?: boolean
@@ -468,6 +549,7 @@ export type Database = {
           address_tag: string | null
           building: string | null
           city: string | null
+          commission_percent: number
           created_at: string
           customer_id: string
           customer_name: string | null
@@ -477,12 +559,15 @@ export type Database = {
           first_order_discount: boolean
           house_no: string | null
           id: string
+          kitchen_payout: number
           landmark: string | null
           lat: number | null
           lng: number | null
           out_for_delivery_at: string | null
           packed_at: string | null
           partner_id: string | null
+          payment_method: string
+          payment_status: string
           phone: string
           pincode: string | null
           placed_at: string
@@ -502,6 +587,7 @@ export type Database = {
           address_tag?: string | null
           building?: string | null
           city?: string | null
+          commission_percent?: number
           created_at?: string
           customer_id: string
           customer_name?: string | null
@@ -511,12 +597,15 @@ export type Database = {
           first_order_discount?: boolean
           house_no?: string | null
           id?: string
+          kitchen_payout?: number
           landmark?: string | null
           lat?: number | null
           lng?: number | null
           out_for_delivery_at?: string | null
           packed_at?: string | null
           partner_id?: string | null
+          payment_method?: string
+          payment_status?: string
           phone: string
           pincode?: string | null
           placed_at?: string
@@ -536,6 +625,7 @@ export type Database = {
           address_tag?: string | null
           building?: string | null
           city?: string | null
+          commission_percent?: number
           created_at?: string
           customer_id?: string
           customer_name?: string | null
@@ -545,12 +635,15 @@ export type Database = {
           first_order_discount?: boolean
           house_no?: string | null
           id?: string
+          kitchen_payout?: number
           landmark?: string | null
           lat?: number | null
           lng?: number | null
           out_for_delivery_at?: string | null
           packed_at?: string | null
           partner_id?: string | null
+          payment_method?: string
+          payment_status?: string
           phone?: string
           pincode?: string | null
           placed_at?: string
@@ -736,6 +829,7 @@ export type Database = {
           description: string | null
           id: string
           is_open: boolean
+          is_sponsored: boolean
           lat: number | null
           lng: number | null
           logo_url: string | null
@@ -752,6 +846,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_open?: boolean
+          is_sponsored?: boolean
           lat?: number | null
           lng?: number | null
           logo_url?: string | null
@@ -768,6 +863,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_open?: boolean
+          is_sponsored?: boolean
           lat?: number | null
           lng?: number | null
           logo_url?: string | null
@@ -836,6 +932,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bump_banner_metric: {
+        Args: { _banner_id: string; _kind: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

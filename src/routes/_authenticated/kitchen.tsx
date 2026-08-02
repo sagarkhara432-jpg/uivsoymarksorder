@@ -2,11 +2,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ChefHat, LogOut, Volume2 } from "lucide-react";
+import { AlertTriangle, ChefHat, LogOut, Volume2, IndianRupee, ClipboardList, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { acceptOrder, updateOrderStatus } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
+import MediaImage from "@/components/MediaImage";
+import { commissionSplit, useAppSettings } from "@/lib/settings";
 
 
 export const Route = createFileRoute("/_authenticated/kitchen")({
@@ -21,9 +23,12 @@ export const Route = createFileRoute("/_authenticated/kitchen")({
 });
 
 type Order = {
-  id: string; status: string; total: number; prep_time_mins: number | null;
+  id: string; status: string; total: number; subtotal: number; prep_time_mins: number | null;
   customer_name: string | null; address_line: string; phone: string; placed_at: string;
+  accepted_at: string | null; commission_percent: number | null; payment_method: string | null;
 };
+
+type OrderItem = { id: string; order_id: string; name: string; qty: number; price: number; image_url: string | null; notes: string | null };
 
 function KitchenPage() {
   const nav = useNavigate();
@@ -32,6 +37,11 @@ function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [prep, setPrep] = useState<Record<string, number>>({});
   const [alerting, setAlerting] = useState(false);
+  const [tab, setTab] = useState<"live" | "earnings">("live");
+  const [itemsByOrder, setItemsByOrder] = useState<Record<string, OrderItem[]>>({});
+  const [viewItems, setViewItems] = useState<string | null>(null);
+  const [history, setHistory] = useState<Order[]>([]);
+  const { settings } = useAppSettings();
   const alarm = useOrderAlarm();
   const knownIds = useRef<Set<string>>(new Set());
   const accept = useServerFn(acceptOrder);
@@ -59,11 +69,22 @@ function KitchenPage() {
     if (verifiedOrPending !== "approved") return;
     async function load() {
       const { data } = await supabase.from("orders")
-        .select("id, status, total, prep_time_mins, customer_name, address_line, phone, placed_at")
+        .select(SEL)
         .in("status", ["placed", "accepted", "preparing", "packed"])
         .order("placed_at", { ascending: false });
       setOrders(data ?? []);
       (data ?? []).forEach((o) => knownIds.current.add(o.id));
+
+      const ids = (data ?? []).map((o) => o.id);
+      if (ids.length) {
+        const { data: its } = await supabase
+          .from("order_items")
+          .select("id, order_id, name, qty, price, image_url, notes")
+          .in("order_id", ids);
+        const map: Record<string, OrderItem[]> = {};
+        (its ?? []).forEach((i) => { (map[i.order_id] ||= []).push(i); });
+        setItemsByOrder(map);
+      }
     }
     load();
     const ch = supabase
@@ -89,6 +110,18 @@ function KitchenPage() {
     if (pending) alarm.start();
     else alarm.stop();
   }, [orders, verifiedOrPending]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Today's completed orders drive the earnings tab.
+  useEffect(() => {
+    if (verifiedOrPending !== "approved") return;
+    const since = new Date(); since.setHours(0, 0, 0, 0);
+    supabase
+      .from("orders")
+      .select(SEL)
+      .gte("placed_at", since.toISOString())
+      .order("placed_at", { ascending: false })
+      .then(({ data }) => setHistory(data ?? []));
+  }, [verifiedOrPending, orders]);
 
   function fireAlert() {
     setAlerting(true);
@@ -154,37 +187,193 @@ function KitchenPage() {
       )}
 
 
-      <main className="mx-auto grid max-w-5xl gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
-        {!orders.length && <p className="col-span-full py-16 text-center text-sm text-muted-foreground">No active orders.</p>}
-        {orders.map((o) => (
-          <article key={o.id} className={`rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] ${o.status === "placed" ? "pulse-ring" : ""}`}>
-            <div className="flex items-center justify-between">
-              <p className="font-extrabold">#{o.id.slice(0, 6)}</p>
-              <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold capitalize text-accent-foreground">{o.status.replace(/_/g, " ")}</span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">{new Date(o.placed_at).toLocaleTimeString()}</p>
-            <p className="mt-2 text-sm font-semibold">{o.customer_name}</p>
-            <p className="text-xs text-muted-foreground">{o.address_line}</p>
-            <p className="mt-2 text-sm font-bold">₹{o.total}</p>
-
-            {o.status === "placed" && (
-              <div className="mt-3 space-y-2">
-                <label className="text-xs font-semibold">Prep time (mins)</label>
-                <input type="number" min={5} max={120} defaultValue={20} onChange={(e) => setPrep({ ...prep, [o.id]: Number(e.target.value) })} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm" />
-                <SwipeToConfirm tone="fresh" label="Slide to Accept" onConfirm={() => doAccept(o.id)} />
-              </div>
-            )}
-            {o.status === "accepted" && <SwipeToConfirm label="Slide to Start preparing" onConfirm={() => advance(o.id, "preparing")} />}
-            {o.status === "preparing" && <SwipeToConfirm tone="orange" label="Slide to Mark packed" onConfirm={() => advance(o.id, "packed")} />}
-            {o.status === "packed" && <SwipeToConfirm label="Slide to Hand to rider" onConfirm={() => advance(o.id, "out_for_delivery")} />}
-
-          </article>
+      <nav className="mx-auto mt-3 flex max-w-5xl gap-2 px-4">
+        {([["live", "Live orders", ClipboardList], ["earnings", "Earnings", IndianRupee]] as const).map(([id, label, Icon]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`press inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-bold ${
+              tab === id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface active:bg-accent"
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" /> {label}
+          </button>
         ))}
-      </main>
+      </nav>
+
+      {tab === "live" && (
+        <main className="mx-auto grid max-w-5xl gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+          {!orders.length && <p className="col-span-full py-16 text-center text-sm text-muted-foreground">No active orders.</p>}
+          {orders.map((o) => {
+            const its = itemsByOrder[o.id] ?? [];
+            const split = commissionSplit(Number(o.subtotal ?? 0), o.commission_percent ?? settings?.commission_percent ?? 15);
+            return (
+              <article key={o.id} className={`rounded-2xl border border-border/60 bg-card p-4 shadow-[var(--shadow-card)] ${o.status === "placed" ? "pulse-ring" : ""}`}>
+                <div className="flex items-center justify-between">
+                  <p className="font-extrabold">#{o.id.slice(0, 6)}</p>
+                  <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold capitalize text-accent-foreground">{o.status.replace(/_/g, " ")}</span>
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{new Date(o.placed_at).toLocaleTimeString()}</span>
+                  <PrepTimer order={o} />
+                </div>
+                <p className="mt-2 text-sm font-semibold">{o.customer_name}</p>
+                <p className="text-xs text-muted-foreground">{o.address_line}</p>
+
+                {/* Visual KOT: dish thumbnails so the line cook can plate at a glance. */}
+                <ul className="mt-2 space-y-1.5">
+                  {its.slice(0, 3).map((i) => (
+                    <li key={i.id} className="flex items-center gap-2">
+                      <MediaImage src={i.image_url} alt="" className="h-8 w-8 rounded-lg object-cover" />
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold">{i.name}</span>
+                      <span className="text-xs font-extrabold">×{i.qty}</span>
+                    </li>
+                  ))}
+                </ul>
+                {its.length > 0 && (
+                  <button onClick={() => setViewItems(o.id)} className="press mt-2 w-full rounded-xl border border-border bg-surface py-1.5 text-[11px] font-bold active:bg-accent">
+                    View items ({its.reduce((n, i) => n + i.qty, 0)})
+                  </button>
+                )}
+
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="font-bold">₹{Number(o.total).toFixed(0)}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {o.payment_method === "cod" ? "COD" : "Prepaid"} · payout ₹{split.kitchen.toFixed(0)}
+                  </span>
+                </div>
+
+                {o.status === "placed" && (
+                  <div className="mt-3 space-y-2">
+                    <label className="text-xs font-semibold">Prep time (mins)</label>
+                    <input type="number" min={5} max={120} defaultValue={20} onChange={(e) => setPrep({ ...prep, [o.id]: Number(e.target.value) })} className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm" />
+                    <SwipeToConfirm tone="fresh" label="Slide to Accept" onConfirm={() => doAccept(o.id)} />
+                  </div>
+                )}
+                {(o.status === "accepted" || o.status === "preparing") && (
+                  <div className="mt-3"><SwipeToConfirm tone="orange" label="Slide to Mark ready" onConfirm={() => advance(o.id, "packed")} /></div>
+                )}
+                {o.status === "packed" && (
+                  <p className="mt-3 rounded-xl bg-fresh/10 px-3 py-2 text-[11px] font-bold text-fresh">
+                    Ready · rider auto-dispatched
+                  </p>
+                )}
+              </article>
+            );
+          })}
+        </main>
+      )}
+
+      {tab === "earnings" && <KitchenEarnings orders={history} fallbackPct={settings?.commission_percent ?? 15} />}
+
+      {viewItems && (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-foreground/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border/60 bg-card p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-extrabold">Order #{viewItems.slice(0, 6)}</h2>
+              <button onClick={() => setViewItems(null)} aria-label="Close" className="press grid h-8 w-8 place-items-center rounded-full border border-border bg-surface">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ul className="mt-3 space-y-2">
+              {(itemsByOrder[viewItems] ?? []).map((i) => (
+                <li key={i.id} className="flex items-start gap-3 rounded-2xl border border-border/60 bg-surface p-2">
+                  <MediaImage src={i.image_url} alt="" className="h-12 w-12 rounded-xl object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold">{i.name} × {i.qty}</p>
+                    <p className="text-xs text-muted-foreground">₹{(Number(i.price) * i.qty).toFixed(0)}</p>
+                    {i.notes && <p className="mt-0.5 text-[11px] italic text-offer">Special request: {i.notes}</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
+
+const SEL =
+  "id, status, total, subtotal, prep_time_mins, customer_name, address_line, phone, placed_at, accepted_at, commission_percent, payment_method";
+
+/** Counts up from acceptance so staff can see how long a ticket has been open. */
+function PrepTimer({ order }: { order: Order }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  if (!order.accepted_at) return null;
+  const secs = Math.max(0, Math.floor((Date.now() - new Date(order.accepted_at).getTime()) / 1000));
+  const late = order.prep_time_mins != null && secs > order.prep_time_mins * 60;
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${late ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground"}`}>
+      {String(Math.floor(secs / 60)).padStart(2, "0")}:{String(secs % 60).padStart(2, "0")}
+      {order.prep_time_mins ? ` / ${order.prep_time_mins}m` : ""}
+    </span>
+  );
+}
+
+function KitchenEarnings({ orders, fallbackPct }: { orders: Order[]; fallbackPct: number }) {
+  const completed = orders.filter((o) => o.status === "delivered");
+  const gross = completed.reduce((s, o) => s + Number(o.subtotal ?? 0), 0);
+  const totals = completed.reduce(
+    (acc, o) => {
+      const split = commissionSplit(Number(o.subtotal ?? 0), o.commission_percent ?? fallbackPct);
+      acc.commission += split.commission;
+      acc.kitchen += split.kitchen;
+      return acc;
+    },
+    { commission: 0, kitchen: 0 },
+  );
+
+  return (
+    <main className="mx-auto max-w-5xl space-y-4 p-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Today's orders" value={String(orders.length)} />
+        <Stat label="Completed" value={String(completed.length)} />
+        <Stat label="Gross revenue" value={`₹${gross.toFixed(0)}`} />
+        <Stat label="Net payout" value={`₹${totals.kitchen.toFixed(0)}`} tone />
+      </div>
+      <p className="rounded-2xl border border-border/60 bg-card p-3 text-xs text-muted-foreground">
+        App commission deducted today: <span className="font-extrabold text-foreground">₹{totals.commission.toFixed(0)}</span>
+      </p>
+
+      <div className="space-y-2">
+        {completed.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">No completed orders yet today.</p>}
+        {completed.map((o) => {
+          const pct = o.commission_percent ?? fallbackPct;
+          const split = commissionSplit(Number(o.subtotal ?? 0), pct);
+          return (
+            <div key={o.id} className="rounded-2xl border border-border/60 bg-card p-3 text-sm">
+              <div className="flex items-center justify-between font-bold">
+                <span>#{o.id.slice(0, 6)}</span>
+                <span>₹{Number(o.subtotal ?? 0).toFixed(0)}</span>
+              </div>
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                <span>Item total ₹{Number(o.subtotal ?? 0).toFixed(0)}</span>
+                <span>Commission {pct}% (−₹{split.commission.toFixed(0)})</span>
+                <span className="font-extrabold text-fresh">Payout ₹{split.kitchen.toFixed(0)}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </main>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone?: boolean }) {
+  return (
+    <div className={`rounded-2xl border p-3 ${tone ? "border-fresh/40 bg-fresh/5" : "border-border/60 bg-card"}`}>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-extrabold">{value}</p>
+    </div>
+  );
+}
 
 function PartnerOnboard({ role, status }: { role: "kitchen" | "delivery"; status: "none" | "pending" | "rejected" | "approved" }) {
   const [form, setForm] = useState({ full_name: "", phone: "", vehicle_number: "" });

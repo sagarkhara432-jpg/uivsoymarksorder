@@ -25,6 +25,7 @@ const PlaceOrderInput = z.object({
   customer_name: z.string().min(1).max(120),
   lat: z.number().optional(),
   lng: z.number().optional(),
+  payment_method: z.enum(["online", "cod", "card"]).default("online"),
 });
 
 export const placeOrder = createServerFn({ method: "POST" })
@@ -41,6 +42,16 @@ export const placeOrder = createServerFn({ method: "POST" })
     const freeOver = Number(settings?.free_delivery_over ?? 400);
     const taxPct = Number(settings?.tax_percent ?? 5);
     const riderPayout = Number(settings?.rider_payout_per_order ?? 35);
+    const commissionPct = Number(settings?.commission_percent ?? 15);
+    if (data.payment_method === "cod" && settings && settings.payment_cod_enabled === false) {
+      throw new Error("Cash on delivery is currently unavailable");
+    }
+    if (data.payment_method === "online" && settings && settings.payment_online_enabled === false) {
+      throw new Error("Online payment is currently unavailable");
+    }
+    if (data.payment_method === "card" && settings && settings.payment_card_enabled === false) {
+      throw new Error("Card payment is currently unavailable");
+    }
 
     // Look up menu items with authoritative pricing
     const ids = data.items.map((i) => i.id);
@@ -101,6 +112,10 @@ export const placeOrder = createServerFn({ method: "POST" })
         tax,
         total,
         rider_payout: riderPayout,
+        commission_percent: commissionPct,
+        kitchen_payout: Math.round(subtotal * (1 - commissionPct / 100) * 100) / 100,
+        payment_method: data.payment_method,
+        payment_status: data.payment_method === "cod" ? "cod_pending" : "pending",
         first_order_discount,
         address_line: data.address_line,
         house_no: data.house_no ?? null,
@@ -142,49 +157,63 @@ export const acceptOrder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
-    // fetch order location
     const { data: order, error: oErr } = await supabase
       .from("orders")
-      .select("id, status, lat, lng, partner_id")
+      .select("id, status")
       .eq("id", data.order_id)
       .single();
     if (oErr) throw new Error(oErr.message);
     if (order.status !== "placed") throw new Error("Order already handled");
 
-    // find nearest online delivery partner
-    const { data: partners } = await supabase
-      .from("partner_status")
-      .select("user_id, last_lat, last_lng")
-      .eq("is_online", true);
-
-    let partner_id: string | null = null;
-    if (order.lat != null && order.lng != null && partners && partners.length > 0) {
-      let best = Infinity;
-      for (const p of partners) {
-        if (p.last_lat == null || p.last_lng == null) continue;
-        const d = haversine(order.lat, order.lng, p.last_lat, p.last_lng);
-        if (d < best) {
-          best = d;
-          partner_id = p.user_id;
-        }
-      }
-    } else if (partners && partners.length > 0) {
-      partner_id = partners[0].user_id;
-    }
-
+    // Kitchen staff may ONLY move the order into preparation. Writing partner_id
+    // or any delivery timestamp here trips the order-security trigger, so rider
+    // dispatch is handled separately once the food is marked ready.
     const { error: uErr } = await supabase
       .from("orders")
       .update({
-        status: "accepted",
+        status: "preparing",
         prep_time_mins: data.prep_time_mins,
         accepted_at: new Date().toISOString(),
-        partner_id,
       })
       .eq("id", data.order_id);
     if (uErr) throw new Error(uErr.message);
 
-    return { partner_id };
+    return { ok: true };
   });
+
+/** Assigns the nearest online rider. Runs with elevated rights so kitchen
+ * accounts never write delivery columns themselves. */
+async function dispatchNearestPartner(orderId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: order } = await supabaseAdmin
+    .from("orders")
+    .select("id, lat, lng, partner_id")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order || order.partner_id) return null;
+
+  const { data: partners } = await supabaseAdmin
+    .from("partner_status")
+    .select("user_id, last_lat, last_lng")
+    .eq("is_online", true);
+  if (!partners || partners.length === 0) return null;
+
+  let partner_id: string | null = partners[0].user_id;
+  if (order.lat != null && order.lng != null) {
+    let best = Infinity;
+    for (const p of partners) {
+      if (p.last_lat == null || p.last_lng == null) continue;
+      const d = haversine(order.lat, order.lng, p.last_lat, p.last_lng);
+      if (d < best) {
+        best = d;
+        partner_id = p.user_id;
+      }
+    }
+  }
+
+  await supabaseAdmin.from("orders").update({ partner_id }).eq("id", orderId);
+  return partner_id;
+}
 
 const StatusInput = z.object({
   order_id: z.string().uuid(),
@@ -199,15 +228,24 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
     const patch: {
       status: typeof data.status;
       packed_at?: string;
+      ready_at?: string;
       out_for_delivery_at?: string;
       delivered_at?: string;
     } = { status: data.status };
-    if (data.status === "packed") patch.packed_at = now;
+    if (data.status === "packed") {
+      patch.packed_at = now;
+      patch.ready_at = now;
+    }
     if (data.status === "out_for_delivery") patch.out_for_delivery_at = now;
     if (data.status === "delivered") patch.delivered_at = now;
     const { error } = await context.supabase.from("orders").update(patch).eq("id", data.order_id);
     if (error) throw new Error(error.message);
-    return { ok: true };
+
+    // "Packed" means the kitchen marked the food ready — auto-dispatch a rider.
+    let partner_id: string | null = null;
+    if (data.status === "packed") partner_id = await dispatchNearestPartner(data.order_id);
+
+    return { ok: true, partner_id };
   });
 
 const CompleteInput = z.object({
@@ -227,7 +265,7 @@ export const completeDelivery = createServerFn({ method: "POST" })
 
     const { data: order, error: oErr } = await supabase
       .from("orders")
-      .select("id, status, partner_id, rider_payout")
+      .select("id, status, partner_id, rider_payout, lat, lng")
       .eq("id", data.order_id)
       .single();
     if (oErr) throw new Error(oErr.message);
@@ -248,13 +286,33 @@ export const completeDelivery = createServerFn({ method: "POST" })
       .eq("id", data.order_id);
     if (uErr) throw new Error(uErr.message);
 
-    const amount = Number(order.rider_payout ?? 0);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: settings } = await supabase
+      .from("app_settings")
+      .select("per_km_rate, rider_incentive_amount, rider_incentive_km")
+      .eq("id", "global")
+      .maybeSingle();
+
+    // Distance-triggered incentive on top of the flat per-order payout.
+    let incentive = 0;
+    const { data: status } = await supabase
+      .from("partner_status")
+      .select("last_lat, last_lng")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const triggerKm = Number(settings?.rider_incentive_km ?? 5);
+    if (order.lat != null && order.lng != null && status?.last_lat != null && status?.last_lng != null) {
+      const km = haversine(order.lat, order.lng, status.last_lat, status.last_lng);
+      if (km >= triggerKm) incentive = Number(settings?.rider_incentive_amount ?? 0);
+    }
+
+    const amount = Math.round((Number(order.rider_payout ?? 0) + incentive) * 100) / 100;
     if (amount > 0) {
       await supabaseAdmin.from("rider_earnings").insert({ partner_id: userId, order_id: order.id, amount });
     }
+    await supabaseAdmin.from("orders").update({ payment_status: "paid" }).eq("id", order.id);
 
-    return { ok: true, earned: amount };
+    return { ok: true, earned: amount, incentive };
   });
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
