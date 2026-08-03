@@ -7,6 +7,7 @@ import {
   BadgeIndianRupee,
   CheckCircle2,
   IndianRupee,
+  Lock,
   LogOut,
   Navigation,
   Package,
@@ -17,7 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { completeDelivery, updateOrderStatus } from "@/lib/orders.functions";
+import { completeDelivery, verifyPickup } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
 import LeafletMap from "@/components/LeafletMap";
@@ -38,8 +39,9 @@ type Order = {
   id: string; status: string; total: number; address_line: string; phone: string;
   customer_name: string | null; lat: number | null; lng: number | null; partner_id: string | null;
   restaurant_id: string | null; house_no: string | null; building: string | null; landmark: string | null;
-  rider_payout: number | null;
+  rider_payout: number | null; is_kitchen_verified: boolean;
 };
+
 
 type Stage = "assigned" | "at_store" | "picked" | "at_customer";
 
