@@ -270,6 +270,54 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
   });
 
 
+const PickupInput = z.object({
+  order_id: z.string().uuid(),
+  pin: z.string().regex(/^\d{4}$/, "Enter the 4-digit kitchen code"),
+});
+
+/**
+ * Stage 1 of the handover: the rider types the kitchen's 4-digit code. The code
+ * is verified inside the database (security definer, assigned-rider only), and
+ * the order trigger refuses 'out_for_delivery' until that verification exists.
+ */
+export const verifyPickup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => PickupInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: order, error: oErr } = await supabase
+      .from("orders")
+      .select("id, status, partner_id")
+      .eq("id", data.order_id)
+      .single();
+    if (oErr) throw new Error(oErr.message);
+    if (order.partner_id !== userId) throw new Error("This order is not assigned to you");
+    if (order.status !== "packed" && order.status !== "out_for_delivery") {
+      throw new Error("The kitchen has not marked this order ready yet");
+    }
+
+    const { data: ok, error: vErr } = await supabase.rpc("consume_pickup_pin", {
+      _order_id: data.order_id,
+      _pin: data.pin,
+    });
+    if (vErr) throw new Error(vErr.message);
+    if (!ok) throw new Error("Incorrect kitchen code — ask the kitchen to read it again");
+
+    const now = new Date().toISOString();
+    const { data: updated, error: uErr } = await supabase
+      .from("orders")
+      .update({ status: "out_for_delivery", out_for_delivery_at: now, is_kitchen_verified: true })
+      .eq("id", data.order_id)
+      .select("id")
+      .maybeSingle();
+    if (uErr) throw new Error(uErr.message);
+    if (!updated) throw new Error("Not allowed to update this order");
+
+    return { ok: true };
+  });
+
+
 const CompleteInput = z.object({
   order_id: z.string().uuid(),
   pin: z.string().regex(/^\d{4}$/, "Enter the 4-digit code"),
