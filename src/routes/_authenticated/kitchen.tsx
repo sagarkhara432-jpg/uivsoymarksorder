@@ -299,6 +299,30 @@ function KitchenPage() {
   );
 }
 
+/** Handover code the kitchen reads out to the rider at pickup. */
+function PickupCode({ orderId }: { orderId: string }) {
+  const [pin, setPin] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    supabase
+      .from("order_pickup_pins")
+      .select("pin")
+      .eq("order_id", orderId)
+      .maybeSingle()
+      .then(({ data }) => { if (alive) setPin(data?.pin ?? null); });
+    return () => { alive = false; };
+  }, [orderId]);
+
+  return (
+    <div className="rounded-xl border border-primary/40 bg-primary/5 px-3 py-2">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-primary">Rider pickup code</p>
+      <p className="text-2xl font-black tracking-[0.3em]">{pin ?? "••••"}</p>
+      <p className="text-[10px] text-muted-foreground">Read this to the delivery partner only after handing over the food.</p>
+    </div>
+  );
+}
+
 
 const SEL =
   "id, status, total, subtotal, prep_time_mins, customer_name, address_line, phone, placed_at, accepted_at, commission_percent, payment_method";
