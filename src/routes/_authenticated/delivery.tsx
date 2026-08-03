@@ -59,7 +59,7 @@ function DeliveryPage() {
   const [tab, setTab] = useState<"active" | "earnings">("active");
   const [stage, setStage] = useState<Stage>("assigned");
   const posWatch = useRef<number | null>(null);
-  const update = useServerFn(updateOrderStatus);
+  const alarm = useOrderAlarm();
   const alarm = useOrderAlarm();
   const [ackedId, setAckedId] = useState<string | null>(null);
   const restaurants = useRestaurants();
