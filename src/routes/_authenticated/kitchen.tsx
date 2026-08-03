@@ -254,10 +254,14 @@ function KitchenPage() {
                   <div className="mt-3"><SwipeToConfirm tone="orange" label="Slide to Mark ready" onConfirm={() => advance(o.id, "packed")} /></div>
                 )}
                 {o.status === "packed" && (
-                  <p className="mt-3 rounded-xl bg-fresh/10 px-3 py-2 text-[11px] font-bold text-fresh">
-                    Ready · rider auto-dispatched
-                  </p>
+                  <div className="mt-3 space-y-2">
+                    <p className="rounded-xl bg-fresh/10 px-3 py-2 text-[11px] font-bold text-fresh">
+                      Ready · rider auto-dispatched
+                    </p>
+                    <PickupCode orderId={o.id} />
+                  </div>
                 )}
+
               </article>
             );
           })}
