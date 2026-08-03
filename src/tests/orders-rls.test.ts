@@ -183,6 +183,7 @@ d("orders_kitchen_update_unrestricted regression", () => {
       "guard:Delivery partners may only update delivery status",
       "guard:Invalid status transition for delivery partner",
     );
+  });
 
   it("requires a verified customer PIN before an order can become delivered", () => {
     const src = triggerFunctionSource();
@@ -194,7 +195,6 @@ d("orders_kitchen_update_unrestricted regression", () => {
   });
 });
 
-});
 
 d("orders table hardening", () => {
   it("has RLS enabled and forced-safe defaults", () => {
