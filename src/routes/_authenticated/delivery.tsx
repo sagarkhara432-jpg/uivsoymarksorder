@@ -89,7 +89,7 @@ function DeliveryPage() {
     if (status !== "approved" || !uid) return;
     async function load() {
       const { data } = await supabase.from("orders")
-        .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id, restaurant_id, house_no, building, landmark, rider_payout")
+        .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id, restaurant_id, house_no, building, landmark, rider_payout, is_kitchen_verified")
         .eq("partner_id", uid!)
         .in("status", ["accepted", "preparing", "packed", "out_for_delivery"])
         .maybeSingle();
@@ -387,6 +387,49 @@ function Stat({ icon, label, value, hint }: { icon: React.ReactNode; label: stri
       <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{icon}{label}</p>
       <p className="mt-1 text-2xl font-black">{value}</p>
       {hint && <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+/** Stage 1: rider enters the kitchen's 4-digit handover code to unlock the drop. */
+function PickupPinVerify({ orderId }: { orderId: string }) {
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  const verify = useServerFn(verifyPickup);
+
+  async function submit() {
+    if (!/^\d{4}$/.test(pin)) return toast.error("Enter the 4-digit code from the kitchen");
+    setBusy(true);
+    try {
+      await verify({ data: { order_id: orderId, pin } });
+      toast.success("Pickup confirmed — customer details unlocked");
+      setPin("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-primary/40 bg-primary/5 p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-primary">Kitchen pickup code</p>
+      <input
+        inputMode="numeric"
+        maxLength={4}
+        value={pin}
+        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+        placeholder="••••"
+        aria-label="Kitchen pickup OTP"
+        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-center text-2xl font-black tracking-[0.4em] outline-none focus:border-primary"
+      />
+      <button
+        onClick={submit}
+        disabled={busy || pin.length !== 4}
+        className="press w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
+      >
+        {busy ? "Verifying…" : "Verify Kitchen Pickup"}
+      </button>
     </div>
   );
 }
