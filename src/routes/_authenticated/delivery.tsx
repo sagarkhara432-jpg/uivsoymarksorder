@@ -60,7 +60,6 @@ function DeliveryPage() {
   const [stage, setStage] = useState<Stage>("assigned");
   const posWatch = useRef<number | null>(null);
   const alarm = useOrderAlarm();
-  const alarm = useOrderAlarm();
   const [ackedId, setAckedId] = useState<string | null>(null);
   const restaurants = useRestaurants();
 
