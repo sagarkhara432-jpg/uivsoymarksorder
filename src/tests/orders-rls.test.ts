@@ -183,7 +183,17 @@ d("orders_kitchen_update_unrestricted regression", () => {
       "guard:Delivery partners may only update delivery status",
       "guard:Invalid status transition for delivery partner",
     );
+
+  it("requires a verified customer PIN before an order can become delivered", () => {
+    const src = triggerFunctionSource();
+    expect(src).toContain("verified_at IS NOT NULL");
+    expect(src).toMatch(
+      /RAISE EXCEPTION 'Delivery must be completed with the customer delivery code'/,
+    );
+    cover("guard:Delivery must be completed with the customer delivery code");
   });
+});
+
 });
 
 d("orders table hardening", () => {
