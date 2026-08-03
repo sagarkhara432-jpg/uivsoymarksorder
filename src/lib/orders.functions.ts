@@ -155,7 +155,18 @@ export const acceptOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => AcceptInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+
+    // Without the kitchen (or admin) role the database trigger falls through to
+    // the customer rule and reports a confusing "may only cancel" error, so
+    // check the role here and explain the real problem.
+    const [{ data: isKitchen }, { data: isAdmin }] = await Promise.all([
+      supabase.rpc("has_role", { _user_id: userId, _role: "kitchen" }),
+      supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
+    ]);
+    if (!isKitchen && !isAdmin) {
+      throw new Error("Your account is not approved as kitchen staff yet, so it cannot accept orders.");
+    }
 
     const { data: order, error: oErr } = await supabase
       .from("orders")
@@ -164,6 +175,7 @@ export const acceptOrder = createServerFn({ method: "POST" })
       .single();
     if (oErr) throw new Error(oErr.message);
     if (order.status !== "placed") throw new Error("Order already handled");
+
 
     // Kitchen staff may ONLY move the order into preparation. Writing partner_id
     // or any delivery timestamp here trips the order-security trigger, so rider
