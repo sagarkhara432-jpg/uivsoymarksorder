@@ -217,7 +217,9 @@ async function dispatchNearestPartner(orderId: string) {
 
 const StatusInput = z.object({
   order_id: z.string().uuid(),
-  status: z.enum(["preparing", "packed", "out_for_delivery", "delivered", "cancelled"]),
+  // 'delivered' is intentionally absent: completion requires the customer PIN
+  // and is only reachable through completeDelivery below.
+  status: z.enum(["preparing", "packed", "out_for_delivery", "cancelled"]),
 });
 
 export const updateOrderStatus = createServerFn({ method: "POST" })
@@ -230,16 +232,23 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
       packed_at?: string;
       ready_at?: string;
       out_for_delivery_at?: string;
-      delivered_at?: string;
     } = { status: data.status };
     if (data.status === "packed") {
       patch.packed_at = now;
       patch.ready_at = now;
     }
     if (data.status === "out_for_delivery") patch.out_for_delivery_at = now;
-    if (data.status === "delivered") patch.delivered_at = now;
-    const { error } = await context.supabase.from("orders").update(patch).eq("id", data.order_id);
+
+    // RLS-scoped update. A caller without permission matches zero rows and gets
+    // no error, so we require the updated row back before doing anything else.
+    const { data: updated, error } = await context.supabase
+      .from("orders")
+      .update(patch)
+      .eq("id", data.order_id)
+      .select("id")
+      .maybeSingle();
     if (error) throw new Error(error.message);
+    if (!updated) throw new Error("Not allowed to update this order");
 
     // "Packed" means the kitchen marked the food ready — auto-dispatch a rider.
     let partner_id: string | null = null;
@@ -247,6 +256,7 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
 
     return { ok: true, partner_id };
   });
+
 
 const CompleteInput = z.object({
   order_id: z.string().uuid(),
@@ -272,12 +282,15 @@ export const completeDelivery = createServerFn({ method: "POST" })
     if (order.partner_id !== userId) throw new Error("This order is not assigned to you");
     if (order.status === "delivered") throw new Error("Order already delivered");
 
-    const { data: ok, error: vErr } = await supabase.rpc("verify_delivery_pin", {
+    // Marks the PIN as verified in the database; the order trigger refuses to
+    // set 'delivered' until that happens, so this is the only completion path.
+    const { data: ok, error: vErr } = await supabase.rpc("consume_delivery_pin", {
       _order_id: data.order_id,
       _pin: data.pin,
     });
     if (vErr) throw new Error(vErr.message);
     if (!ok) throw new Error("Incorrect delivery code — ask the customer to read it again");
+
 
     const now = new Date().toISOString();
     const { error: uErr } = await supabase

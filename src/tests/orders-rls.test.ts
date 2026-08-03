@@ -135,12 +135,15 @@ d("orders_kitchen_update_unrestricted regression", () => {
 
   it("whitelists the only columns kitchen staff may change", () => {
     const src = triggerFunctionSource();
-    expect(src).toContain("to_jsonb(NEW) - 'status' - 'prep_time_mins' - 'accepted_at' - 'packed_at' - 'updated_at'");
+    expect(src).toContain(
+      "to_jsonb(NEW) - 'status' - 'prep_time_mins' - 'accepted_at' - 'packed_at' - 'ready_at' - 'updated_at'",
+    );
     expect(src).toMatch(
       /RAISE EXCEPTION 'Kitchen staff may only change order status and preparation fields'/,
     );
     cover("guard:Kitchen staff may only change order status and preparation fields");
   });
+
 
 
   it("restricts kitchen status transitions to the kitchen workflow", () => {
@@ -181,7 +184,17 @@ d("orders_kitchen_update_unrestricted regression", () => {
       "guard:Invalid status transition for delivery partner",
     );
   });
+
+  it("requires a verified customer PIN before an order can become delivered", () => {
+    const src = triggerFunctionSource();
+    expect(src).toContain("verified_at IS NOT NULL");
+    expect(src).toMatch(
+      /RAISE EXCEPTION 'Delivery must be completed with the customer delivery code'/,
+    );
+    cover("guard:Delivery must be completed with the customer delivery code");
+  });
 });
+
 
 d("orders table hardening", () => {
   it("has RLS enabled and forced-safe defaults", () => {
