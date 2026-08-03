@@ -519,18 +519,21 @@ export type Database = {
           customer_id: string
           order_id: string
           pin: string
+          verified_at: string | null
         }
         Insert: {
           created_at?: string
           customer_id: string
           order_id: string
           pin: string
+          verified_at?: string | null
         }
         Update: {
           created_at?: string
           customer_id?: string
           order_id?: string
           pin?: string
+          verified_at?: string | null
         }
         Relationships: [
           {
@@ -935,6 +938,10 @@ export type Database = {
       bump_banner_metric: {
         Args: { _banner_id: string; _kind: string }
         Returns: undefined
+      }
+      consume_delivery_pin: {
+        Args: { _order_id: string; _pin: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
