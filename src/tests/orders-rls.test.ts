@@ -185,6 +185,15 @@ d("orders_kitchen_update_unrestricted regression", () => {
     );
   });
 
+  it("requires a verified kitchen handover code before pickup", () => {
+    const src = triggerFunctionSource();
+    expect(src).toContain("order_pickup_pins");
+    expect(src).toMatch(
+      /RAISE EXCEPTION 'Pickup must be confirmed with the kitchen handover code'/,
+    );
+    cover("guard:Pickup must be confirmed with the kitchen handover code");
+  });
+
   it("requires a verified customer PIN before an order can become delivered", () => {
     const src = triggerFunctionSource();
     expect(src).toContain("verified_at IS NOT NULL");
@@ -193,6 +202,7 @@ d("orders_kitchen_update_unrestricted regression", () => {
     );
     cover("guard:Delivery must be completed with the customer delivery code");
   });
+
 });
 
 

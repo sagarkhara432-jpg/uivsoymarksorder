@@ -7,6 +7,7 @@ import {
   BadgeIndianRupee,
   CheckCircle2,
   IndianRupee,
+  Lock,
   LogOut,
   Navigation,
   Package,
@@ -17,7 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { completeDelivery, updateOrderStatus } from "@/lib/orders.functions";
+import { completeDelivery, verifyPickup } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
 import LeafletMap from "@/components/LeafletMap";
@@ -38,8 +39,9 @@ type Order = {
   id: string; status: string; total: number; address_line: string; phone: string;
   customer_name: string | null; lat: number | null; lng: number | null; partner_id: string | null;
   restaurant_id: string | null; house_no: string | null; building: string | null; landmark: string | null;
-  rider_payout: number | null;
+  rider_payout: number | null; is_kitchen_verified: boolean;
 };
+
 
 type Stage = "assigned" | "at_store" | "picked" | "at_customer";
 
@@ -57,7 +59,6 @@ function DeliveryPage() {
   const [tab, setTab] = useState<"active" | "earnings">("active");
   const [stage, setStage] = useState<Stage>("assigned");
   const posWatch = useRef<number | null>(null);
-  const update = useServerFn(updateOrderStatus);
   const alarm = useOrderAlarm();
   const [ackedId, setAckedId] = useState<string | null>(null);
   const restaurants = useRestaurants();
@@ -88,7 +89,7 @@ function DeliveryPage() {
     if (status !== "approved" || !uid) return;
     async function load() {
       const { data } = await supabase.from("orders")
-        .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id, restaurant_id, house_no, building, landmark, rider_payout")
+        .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id, restaurant_id, house_no, building, landmark, rider_payout, is_kitchen_verified")
         .eq("partner_id", uid!)
         .in("status", ["accepted", "preparing", "packed", "out_for_delivery"])
         .maybeSingle();
@@ -137,11 +138,8 @@ function DeliveryPage() {
     }
   }, [order?.id, ackedId, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function advance(next: "out_for_delivery") {
-    if (!order) return;
-    try { await update({ data: { order_id: order.id, status: next } }); toast.success(`Order ${next.replace(/_/g, " ")}`); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); throw e; }
-  }
+
+
 
 
   async function signOut() { await supabase.auth.signOut(); nav({ to: "/" }); }
@@ -244,23 +242,31 @@ function DeliveryPage() {
                   </div>
                 </div>
 
-                {/* Drop-off */}
+                {/* Drop-off — locked until the kitchen handover code is verified */}
                 <div className="rounded-2xl border border-border/60 bg-surface p-3">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                     <Package className="h-3.5 w-3.5" /> Drop off to
                   </p>
-                  <p className="mt-1 text-sm font-bold">{order.customer_name ?? "Customer"}</p>
-                  <p className="text-xs text-muted-foreground">{dropLine}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {order.lat != null && order.lng != null && (
-                      <a href={mapsLink(order.lat, order.lng)} target="_blank" rel="noreferrer" className="press inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground active:bg-primary-press">
-                        <Navigation className="h-3.5 w-3.5" /> Navigate to customer
-                      </a>
-                    )}
-                    <button onClick={() => toast.info("Masked calling requires a telephony provider.")} className="press inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold active:bg-accent">
-                      <Phone className="h-3.5 w-3.5" /> Call customer (masked)
-                    </button>
-                  </div>
+                  {!order.is_kitchen_verified ? (
+                    <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-offer">
+                      <Lock className="h-3.5 w-3.5 shrink-0" /> Customer details unlock after kitchen code verification.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="mt-1 text-sm font-bold">{order.customer_name ?? "Customer"}</p>
+                      <p className="text-xs text-muted-foreground">{dropLine}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {order.lat != null && order.lng != null && (
+                          <a href={mapsLink(order.lat, order.lng)} target="_blank" rel="noreferrer" className="press inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground active:bg-primary-press">
+                            <Navigation className="h-3.5 w-3.5" /> Navigate to customer
+                          </a>
+                        )}
+                        <button onClick={() => toast.info("Masked calling requires a telephony provider.")} className="press inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold active:bg-accent">
+                          <Phone className="h-3.5 w-3.5" /> Call customer (masked)
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Sequential actions */}
@@ -278,7 +284,7 @@ function DeliveryPage() {
                 )}
                 {acked && stage === "at_store" && (
                   order.status === "packed" ? (
-                    <SwipeToConfirm key={`pick-${order.id}`} tone="orange" label="Slide to mark Picked Up" onConfirm={() => advance("out_for_delivery")} />
+                    <PickupPinVerify orderId={order.id} />
                   ) : (
                     <p className="rounded-full bg-muted py-2 text-center text-xs font-semibold text-muted-foreground">Waiting for kitchen to pack the order…</p>
                   )
@@ -289,6 +295,7 @@ function DeliveryPage() {
                   </button>
                 )}
                 {acked && stage === "at_customer" && <PinComplete orderId={order.id} />}
+
 
                 <StepTrail stage={acked ? stage : "assigned"} acked={!!acked} />
               </section>
@@ -380,6 +387,49 @@ function Stat({ icon, label, value, hint }: { icon: React.ReactNode; label: stri
       <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{icon}{label}</p>
       <p className="mt-1 text-2xl font-black">{value}</p>
       {hint && <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+/** Stage 1: rider enters the kitchen's 4-digit handover code to unlock the drop. */
+function PickupPinVerify({ orderId }: { orderId: string }) {
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
+  const verify = useServerFn(verifyPickup);
+
+  async function submit() {
+    if (!/^\d{4}$/.test(pin)) return toast.error("Enter the 4-digit code from the kitchen");
+    setBusy(true);
+    try {
+      await verify({ data: { order_id: orderId, pin } });
+      toast.success("Pickup confirmed — customer details unlocked");
+      setPin("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-primary/40 bg-primary/5 p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-primary">Kitchen pickup code</p>
+      <input
+        inputMode="numeric"
+        maxLength={4}
+        value={pin}
+        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+        placeholder="••••"
+        aria-label="Kitchen pickup OTP"
+        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-center text-2xl font-black tracking-[0.4em] outline-none focus:border-primary"
+      />
+      <button
+        onClick={submit}
+        disabled={busy || pin.length !== 4}
+        className="press w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
+      >
+        {busy ? "Verifying…" : "Verify Kitchen Pickup"}
+      </button>
     </div>
   );
 }

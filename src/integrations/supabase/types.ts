@@ -513,6 +513,35 @@ export type Database = {
           },
         ]
       }
+      order_pickup_pins: {
+        Row: {
+          created_at: string
+          order_id: string
+          pin: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          order_id: string
+          pin: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          order_id?: string
+          pin?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_pickup_pins_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_pins: {
         Row: {
           created_at: string
@@ -562,6 +591,9 @@ export type Database = {
           first_order_discount: boolean
           house_no: string | null
           id: string
+          is_kitchen_verified: boolean
+          kitchen_lat: number | null
+          kitchen_lng: number | null
           kitchen_payout: number
           landmark: string | null
           lat: number | null
@@ -600,6 +632,9 @@ export type Database = {
           first_order_discount?: boolean
           house_no?: string | null
           id?: string
+          is_kitchen_verified?: boolean
+          kitchen_lat?: number | null
+          kitchen_lng?: number | null
           kitchen_payout?: number
           landmark?: string | null
           lat?: number | null
@@ -638,6 +673,9 @@ export type Database = {
           first_order_discount?: boolean
           house_no?: string | null
           id?: string
+          is_kitchen_verified?: boolean
+          kitchen_lat?: number | null
+          kitchen_lng?: number | null
           kitchen_payout?: number
           landmark?: string | null
           lat?: number | null
@@ -940,6 +978,10 @@ export type Database = {
         Returns: undefined
       }
       consume_delivery_pin: {
+        Args: { _order_id: string; _pin: string }
+        Returns: boolean
+      }
+      consume_pickup_pin: {
         Args: { _order_id: string; _pin: string }
         Returns: boolean
       }

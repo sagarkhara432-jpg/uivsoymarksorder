@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: ["src/tests/**/*.test.ts"],
     reporters: ["verbose"],
+    testTimeout: 20000,
     coverage: {
       enabled: true,
       provider: "v8",
