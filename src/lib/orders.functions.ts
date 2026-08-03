@@ -282,12 +282,15 @@ export const completeDelivery = createServerFn({ method: "POST" })
     if (order.partner_id !== userId) throw new Error("This order is not assigned to you");
     if (order.status === "delivered") throw new Error("Order already delivered");
 
-    const { data: ok, error: vErr } = await supabase.rpc("verify_delivery_pin", {
+    // Marks the PIN as verified in the database; the order trigger refuses to
+    // set 'delivered' until that happens, so this is the only completion path.
+    const { data: ok, error: vErr } = await supabase.rpc("consume_delivery_pin", {
       _order_id: data.order_id,
       _pin: data.pin,
     });
     if (vErr) throw new Error(vErr.message);
     if (!ok) throw new Error("Incorrect delivery code — ask the customer to read it again");
+
 
     const now = new Date().toISOString();
     const { error: uErr } = await supabase
