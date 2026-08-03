@@ -138,11 +138,8 @@ function DeliveryPage() {
     }
   }, [order?.id, ackedId, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function advance(next: "out_for_delivery") {
-    if (!order) return;
-    try { await update({ data: { order_id: order.id, status: next } }); toast.success(`Order ${next.replace(/_/g, " ")}`); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); throw e; }
-  }
+
+
 
 
   async function signOut() { await supabase.auth.signOut(); nav({ to: "/" }); }
