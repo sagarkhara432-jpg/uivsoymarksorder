@@ -62,7 +62,11 @@ export type Restaurant = {
   cover_url: string | null;
   is_open: boolean;
   is_sponsored: boolean;
+  landmark?: string | null;
+  status?: string;
+  commission_percent?: number | null;
 };
+
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 

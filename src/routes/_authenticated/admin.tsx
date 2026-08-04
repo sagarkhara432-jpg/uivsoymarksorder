@@ -2,10 +2,15 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X } from "lucide-react";
+import { Shield, Store, Bike, Wallet, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { decideVerification } from "@/lib/admin.functions";
 import { AlertsBell } from "@/components/AdminAlerts";
+import MetricsBar from "@/components/admin/MetricsBar";
+import KitchensTab from "@/components/admin/KitchensTab";
+import RidersTab from "@/components/admin/RidersTab";
+import PaymentsTab from "@/components/admin/PaymentsTab";
+import OrderOverride from "@/components/admin/OrderOverride";
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -19,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type Tab = "orders" | "menu" | "partners" | "offers" | "users" | "audit";
+type Tab = "orders" | "kitchens" | "riders" | "payments" | "menu" | "partners" | "offers" | "users" | "audit";
 
 function AdminPage() {
   const nav = useNavigate();
@@ -74,6 +79,9 @@ function AdminPage() {
         </div>
         <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2">
           <TabBtn active={tab==="orders"} onClick={() => setTab("orders")} icon={<ClipboardList className="h-4 w-4" />} label="Orders" />
+          <TabBtn active={tab==="kitchens"} onClick={() => setTab("kitchens")} icon={<Store className="h-4 w-4" />} label="Kitchens" />
+          <TabBtn active={tab==="riders"} onClick={() => setTab("riders")} icon={<Bike className="h-4 w-4" />} label="Riders" />
+          <TabBtn active={tab==="payments"} onClick={() => setTab("payments")} icon={<Wallet className="h-4 w-4" />} label="Payments & QR" />
           <TabBtn active={tab==="menu"} onClick={() => setTab("menu")} icon={<MenuIcon className="h-4 w-4" />} label="Menu" />
           <TabBtn active={tab==="partners"} onClick={() => setTab("partners")} icon={<Users className="h-4 w-4" />} label="Partners" />
           <TabBtn active={tab==="offers"} onClick={() => setTab("offers")} icon={<Tag className="h-4 w-4" />} label="Offers" />
@@ -82,7 +90,11 @@ function AdminPage() {
         </div>
       </header>
       <main className="mx-auto max-w-6xl p-4">
+        <MetricsBar />
         {tab === "orders" && <OrdersTab />}
+        {tab === "kitchens" && <KitchensTab />}
+        {tab === "riders" && <RidersTab />}
+        {tab === "payments" && <PaymentsTab />}
         {tab === "menu" && <MenuTab />}
         {tab === "partners" && <PartnersTab />}
         {tab === "offers" && <OffersTab />}
@@ -126,6 +138,7 @@ function OrdersTab() {
               <p className="text-xs capitalize text-muted-foreground">{o.status.replace(/_/g, " ")}</p>
             </div>
           </div>
+          <OrderOverride orderId={o.id} status={o.status} onDone={() => {}} />
         </div>
       ))}
     </div>

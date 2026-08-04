@@ -865,52 +865,64 @@ export type Database = {
         Row: {
           address_line: string | null
           city: string | null
+          commission_percent: number | null
           cover_url: string | null
           created_at: string
           description: string | null
           id: string
           is_open: boolean
           is_sponsored: boolean
+          landmark: string | null
           lat: number | null
           lng: number | null
           logo_url: string | null
           name: string
+          owner_id: string | null
           phone: string | null
           pincode: string | null
+          status: string
           updated_at: string
         }
         Insert: {
           address_line?: string | null
           city?: string | null
+          commission_percent?: number | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_open?: boolean
           is_sponsored?: boolean
+          landmark?: string | null
           lat?: number | null
           lng?: number | null
           logo_url?: string | null
           name: string
+          owner_id?: string | null
           phone?: string | null
           pincode?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
           address_line?: string | null
           city?: string | null
+          commission_percent?: number | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_open?: boolean
           is_sponsored?: boolean
+          landmark?: string | null
           lat?: number | null
           lng?: number | null
           logo_url?: string | null
           name?: string
+          owner_id?: string | null
           phone?: string | null
           pincode?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: []

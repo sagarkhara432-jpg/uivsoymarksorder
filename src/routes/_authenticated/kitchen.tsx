@@ -2,12 +2,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ChefHat, LogOut, Volume2, IndianRupee, ClipboardList, X } from "lucide-react";
+import { AlertTriangle, ChefHat, LogOut, Volume2, IndianRupee, ClipboardList, Store, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { acceptOrder, updateOrderStatus } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
 import MediaImage from "@/components/MediaImage";
+import KitchenLocationCard from "@/components/KitchenLocationCard";
 import { commissionSplit, useAppSettings } from "@/lib/settings";
 
 
@@ -37,7 +38,7 @@ function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [prep, setPrep] = useState<Record<string, number>>({});
   const [alerting, setAlerting] = useState(false);
-  const [tab, setTab] = useState<"live" | "earnings">("live");
+  const [tab, setTab] = useState<"live" | "earnings" | "store">("live");
   const [itemsByOrder, setItemsByOrder] = useState<Record<string, OrderItem[]>>({});
   const [viewItems, setViewItems] = useState<string | null>(null);
   const [history, setHistory] = useState<Order[]>([]);
@@ -188,7 +189,7 @@ function KitchenPage() {
 
 
       <nav className="mx-auto mt-3 flex max-w-5xl gap-2 px-4">
-        {([["live", "Live orders", ClipboardList], ["earnings", "Earnings", IndianRupee]] as const).map(([id, label, Icon]) => (
+        {([["live", "Live orders", ClipboardList], ["earnings", "Earnings", IndianRupee], ["store", "Store & location", Store]] as const).map(([id, label, Icon]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -200,6 +201,8 @@ function KitchenPage() {
           </button>
         ))}
       </nav>
+
+      {tab === "store" && <KitchenLocationCard />}
 
       {tab === "live" && (
         <main className="mx-auto grid max-w-5xl gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
