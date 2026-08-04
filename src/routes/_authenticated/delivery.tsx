@@ -297,7 +297,7 @@ function DeliveryPage() {
                     Arrived at Store
                   </button>
                 )}
-                {acked && stage === "at_store" && (
+                {acked && (stage === "at_store" || (stage === "assigned" && order.status === "packed")) && (
                   order.status === "packed" ? (
                     <PickupPinVerify orderId={order.id} />
                   ) : (
