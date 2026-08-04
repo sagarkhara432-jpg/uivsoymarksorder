@@ -79,8 +79,20 @@ function DeliveryPage() {
         const { data: v } = await supabase.from("partner_verifications").select("status").eq("user_id", u.user.id).eq("requested_role", "delivery").maybeSingle();
         setStatus((v?.status as any) ?? "none");
       }
-      const { data: ps } = await supabase.from("partner_status").select("is_online").eq("user_id", u.user.id).maybeSingle();
-      setOnline(!!ps?.is_online);
+      // Coming online is automatic: as soon as the app connects, the rider is
+      // marked available so real-time assignments start flowing immediately.
+      await supabase.from("partner_status").upsert({ user_id: u.user.id, is_online: true });
+      setOnline(true);
+      if (navigator.geolocation) {
+        posWatch.current = navigator.geolocation.watchPosition(
+          (p) => {
+            supabase
+              .from("partner_status")
+              .upsert({ user_id: u.user.id, is_online: true, last_lat: p.coords.latitude, last_lng: p.coords.longitude });
+          },
+          () => {},
+        );
+      }
       setReady(true);
     })();
   }, []);
@@ -88,12 +100,15 @@ function DeliveryPage() {
   useEffect(() => {
     if (status !== "approved" || !uid) return;
     async function load() {
+      // A rider can hold more than one assignment; take the most urgent one
+      // instead of maybeSingle(), which errors out when several rows match.
       const { data } = await supabase.from("orders")
         .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id, restaurant_id, house_no, building, landmark, rider_payout, is_kitchen_verified")
         .eq("partner_id", uid!)
         .in("status", ["accepted", "preparing", "packed", "out_for_delivery"])
-        .maybeSingle();
-      setOrder(data as Order | null);
+        .order("placed_at", { ascending: true })
+        .limit(1);
+      setOrder(((data ?? [])[0] as Order | undefined) ?? null);
     }
     load();
     const ch = supabase.channel("delivery-orders")
@@ -282,7 +297,7 @@ function DeliveryPage() {
                     Arrived at Store
                   </button>
                 )}
-                {acked && stage === "at_store" && (
+                {acked && (stage === "at_store" || (stage === "assigned" && order.status === "packed")) && (
                   order.status === "packed" ? (
                     <PickupPinVerify orderId={order.id} />
                   ) : (

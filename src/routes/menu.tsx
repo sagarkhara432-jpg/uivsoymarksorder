@@ -7,6 +7,7 @@ import { useSession, useMyProfile } from "@/lib/auth";
 import { useAppSettings, useBanners, useRestaurants } from "@/lib/settings";
 import MediaImage from "@/components/MediaImage";
 import DownloadAppButton from "@/components/DownloadAppButton";
+import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 
 export const Route = createFileRoute("/menu")({
   head: () => ({
@@ -191,7 +192,7 @@ function MenuPage() {
       </main>
 
       <DownloadAppButton />
-      {count > 0 && <CartBar count={count} subtotal={subtotal} />}
+      {count > 0 ? <CartBar count={count} subtotal={subtotal} /> : <ActiveOrderBanner />}
     </div>
   );
 }
