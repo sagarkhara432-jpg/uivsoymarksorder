@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { ShoppingBag, ChefHat, Bike, ShieldCheck, Sparkles } from "lucide-react";
 import { useSession, useMyRoles, useMyProfile } from "@/lib/auth";
+import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -76,6 +77,8 @@ function Landing() {
           <FeatureCard icon={<ShieldCheck className="h-5 w-5" />} title="Secure & private" text="Masked calls, verified partners, protected data." tone="offer" />
         </div>
       </section>
+
+      {user && <ActiveOrderBanner />}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { useSession, useMyProfile } from "@/lib/auth";
 import { useAppSettings, useBanners, useRestaurants } from "@/lib/settings";
 import MediaImage from "@/components/MediaImage";
 import DownloadAppButton from "@/components/DownloadAppButton";
+import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 
 export const Route = createFileRoute("/menu")({
   head: () => ({
