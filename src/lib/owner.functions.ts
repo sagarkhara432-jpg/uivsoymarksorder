@@ -19,7 +19,9 @@ export const assignRider = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => AssignInput.parse(d))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("orders")
@@ -34,16 +36,21 @@ export const forceOrderStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ForceInput.parse(d))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    const now = new Date().toISOString();
-    const patch: Record<string, unknown> = { status: data.status };
-    if (data.status === "preparing") patch.accepted_at = now;
-    if (data.status === "packed") { patch.packed_at = now; patch.ready_at = now; }
-    if (data.status === "out_for_delivery") patch.out_for_delivery_at = now;
-    if (data.status === "delivered") patch.delivered_at = now;
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
 
+    const now = new Date().toISOString();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("orders").update(patch).eq("id", data.order_id);
+    const { error } = await supabaseAdmin
+      .from("orders")
+      .update({
+        status: data.status,
+        ...(data.status === "preparing" ? { accepted_at: now } : {}),
+        ...(data.status === "packed" ? { packed_at: now, ready_at: now } : {}),
+        ...(data.status === "out_for_delivery" ? { out_for_delivery_at: now } : {}),
+        ...(data.status === "delivered" ? { delivered_at: now } : {}),
+      })
+      .eq("id", data.order_id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -53,7 +60,9 @@ export const regeneratePickupPin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => OrderInput.parse(d))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+
     const pin = String(Math.floor(1000 + Math.random() * 9000));
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
@@ -62,12 +71,3 @@ export const regeneratePickupPin = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { pin };
   });
-
-async function assertAdmin(context: { supabase: { rpc: Function }; userId: string }) {
-  const { data: isAdmin, error } = await (context.supabase as any).rpc("has_role", {
-    _user_id: context.userId,
-    _role: "admin",
-  });
-  if (error) throw new Error(error.message);
-  if (!isAdmin) throw new Error("Forbidden");
-}
