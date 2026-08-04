@@ -191,7 +191,7 @@ function MenuPage() {
       </main>
 
       <DownloadAppButton />
-      {count > 0 && <CartBar count={count} subtotal={subtotal} />}
+      {count > 0 ? <CartBar count={count} subtotal={subtotal} /> : <ActiveOrderBanner />}
     </div>
   );
 }
