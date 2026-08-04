@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import QrCode from "@/components/QrCode";
 import ImageUploadInput from "@/components/ImageUploadInput";
 import { useAppSettings } from "@/lib/settings";
-import { resolveMedia } from "@/lib/media";
 
 /** Owner payment credentials, UPI intent preview and printable app-download poster. */
 export default function PaymentsTab() {
@@ -55,7 +54,7 @@ export default function PaymentsTab() {
   const sampleUpi = `upi://pay?pa=${encodeURIComponent(f.upi_id || "your-upi@bank")}&pn=${encodeURIComponent(f.upi_merchant_name || settings?.app_name || "Uivsoymarks")}&am=250.00&cu=INR&tn=Order%20UIV1234`;
 
   function printPoster() {
-    const canvas = document.querySelector<HTMLCanvasElement>("canvas[data-poster-qr]");
+    const canvas = document.querySelector<HTMLCanvasElement>("[data-poster-wrap] canvas");
     const img = canvas?.toDataURL("image/png") ?? "";
     const w = window.open("", "_blank", "width=800,height=1000");
     if (!w) return toast.error("Allow pop-ups to print the poster");
@@ -112,7 +111,7 @@ export default function PaymentsTab() {
           </div>
           <div className="grid place-items-center">
             <div data-poster-wrap className="w-full">
-              <QrCode value={appUrl || "https://uivsoymarksorder.lovable.app"} logo={resolveMedia(f.qr_logo_url)} size={260} fileName="uivsoymarks-app-qr" canvasProps={{ "data-poster-qr": true }} />
+              <QrCode value={appUrl || "https://uivsoymarksorder.lovable.app"} logo={f.qr_logo_url} size={260} fileName="uivsoymarks-app-qr" />
             </div>
             <p className="mt-1 break-all text-center text-[11px] text-muted-foreground">{appUrl}</p>
           </div>
