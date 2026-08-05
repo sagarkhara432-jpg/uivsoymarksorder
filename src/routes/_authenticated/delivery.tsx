@@ -22,7 +22,11 @@ import { completeDelivery, verifyPickup } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
 import LeafletMap from "@/components/LeafletMap";
-import { useRestaurants } from "@/lib/settings";
+import { useRestaurants, useAppSettings } from "@/lib/settings";
+import { upiDeepLink } from "@/lib/upi";
+import { isValidUpiId } from "@/lib/upi";
+import QrCode from "@/components/QrCode";
+
 
 export const Route = createFileRoute("/_authenticated/delivery")({
   head: () => ({
