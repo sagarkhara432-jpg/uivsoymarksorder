@@ -22,7 +22,11 @@ import { completeDelivery, verifyPickup } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
 import LeafletMap from "@/components/LeafletMap";
-import { useRestaurants } from "@/lib/settings";
+import { useRestaurants, useAppSettings } from "@/lib/settings";
+import { upiDeepLink, isValidUpiId } from "@/lib/upi";
+
+import QrCode from "@/components/QrCode";
+
 
 export const Route = createFileRoute("/_authenticated/delivery")({
   head: () => ({
@@ -40,7 +44,9 @@ type Order = {
   customer_name: string | null; lat: number | null; lng: number | null; partner_id: string | null;
   restaurant_id: string | null; house_no: string | null; building: string | null; landmark: string | null;
   rider_payout: number | null; is_kitchen_verified: boolean;
+  payment_method: string | null; payment_status: string | null;
 };
+
 
 
 type Stage = "assigned" | "at_store" | "picked" | "at_customer";
@@ -103,7 +109,7 @@ function DeliveryPage() {
       // A rider can hold more than one assignment; take the most urgent one
       // instead of maybeSingle(), which errors out when several rows match.
       const { data } = await supabase.from("orders")
-        .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id, restaurant_id, house_no, building, landmark, rider_payout, is_kitchen_verified")
+        .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id, restaurant_id, house_no, building, landmark, rider_payout, is_kitchen_verified, payment_method, payment_status")
         .eq("partner_id", uid!)
         .in("status", ["accepted", "preparing", "packed", "out_for_delivery"])
         .order("placed_at", { ascending: true })
@@ -232,9 +238,16 @@ function DeliveryPage() {
                 </div>
 
                 {/* Payment badge */}
-                <div className="inline-flex items-center gap-2 rounded-full bg-fresh/15 px-3 py-1.5 text-xs font-bold text-fresh">
-                  <BadgeIndianRupee className="h-4 w-4" /> Prepaid — collect nothing (₹{order.total} paid online)
-                </div>
+                {order.payment_method === "cod" ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-offer/20 px-3 py-1.5 text-xs font-bold text-offer">
+                    <BadgeIndianRupee className="h-4 w-4" /> COD — collect ₹{order.total} at the door
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-fresh/15 px-3 py-1.5 text-xs font-bold text-fresh">
+                    <BadgeIndianRupee className="h-4 w-4" /> Prepaid — collect nothing (₹{order.total} paid online)
+                  </div>
+                )}
+
 
                 {/* Pick-up */}
                 <div className="rounded-2xl border border-border/60 bg-surface p-3">
@@ -299,7 +312,7 @@ function DeliveryPage() {
                 )}
                 {acked && (stage === "at_store" || (stage === "assigned" && order.status === "packed")) && (
                   order.status === "packed" ? (
-                    <PickupPinVerify orderId={order.id} />
+                    <PickupPinVerify orderId={order.id} onVerified={() => setStage("picked")} />
                   ) : (
                     <p className="rounded-full bg-muted py-2 text-center text-xs font-semibold text-muted-foreground">Waiting for kitchen to pack the order…</p>
                   )
@@ -307,9 +320,10 @@ function DeliveryPage() {
                 {acked && stage === "picked" && (
                   <button onClick={() => { setStage("at_customer"); toast.success("Marked arrived at customer"); }} className="press w-full rounded-full bg-offer py-3 text-sm font-bold text-offer-foreground active:opacity-90">
                     Arrived at Customer
+
                   </button>
                 )}
-                {acked && stage === "at_customer" && <PinComplete orderId={order.id} />}
+                {acked && stage === "at_customer" && <PinComplete order={order} />}
 
 
                 <StepTrail stage={acked ? stage : "assigned"} acked={!!acked} />
@@ -407,18 +421,23 @@ function Stat({ icon, label, value, hint }: { icon: React.ReactNode; label: stri
 }
 
 /** Stage 1: rider enters the kitchen's 4-digit handover code to unlock the drop. */
-function PickupPinVerify({ orderId }: { orderId: string }) {
+function PickupPinVerify({ orderId, onVerified }: { orderId: string; onVerified: () => void }) {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const verify = useServerFn(verifyPickup);
 
   async function submit() {
-    if (!/^\d{4}$/.test(pin)) return toast.error("Enter the 4-digit code from the kitchen");
+    // Codes are compared as trimmed strings on both sides, so a stray space or
+    // a numeric-typed value from the kitchen never causes a false mismatch.
+    const code = String(pin).trim();
+    if (!/^\d{4}$/.test(code)) return toast.error("Enter the 4-digit code from the kitchen");
     setBusy(true);
     try {
-      await verify({ data: { order_id: orderId, pin } });
+      await verify({ data: { order_id: orderId, pin: code } });
+      toast.dismiss();
       toast.success("Pickup confirmed — customer details unlocked");
       setPin("");
+      onVerified();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
@@ -440,7 +459,7 @@ function PickupPinVerify({ orderId }: { orderId: string }) {
       />
       <button
         onClick={submit}
-        disabled={busy || pin.length !== 4}
+        disabled={busy || pin.trim().length !== 4}
         className="press w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
       >
         {busy ? "Verifying…" : "Verify Kitchen Pickup"}
@@ -449,17 +468,81 @@ function PickupPinVerify({ orderId }: { orderId: string }) {
   );
 }
 
+/**
+ * Doorstep collection for COD orders: cash in hand, or a dynamic UPI QR that
+ * settles straight into the admin account (so it never touches the rider's
+ * cash-in-hand limit).
+ */
+function CodCollect({
+  orderId,
+  amount,
+  method,
+  onMethod,
+}: {
+  orderId: string;
+  amount: number;
+  method: "cash" | "upi_qr";
+  onMethod: (m: "cash" | "upi_qr") => void;
+}) {
+  const { settings } = useAppSettings();
+  const upiId = settings?.upi_id?.trim() ?? "";
+  const qrValue = isValidUpiId(upiId)
+    ? upiDeepLink("upi://pay", {
+        pa: upiId,
+        pn: settings?.upi_merchant_name || settings?.app_name || "Uivsoymarks",
+        am: amount,
+        tr: orderId,
+        tn: `Order ${orderId.slice(0, 6)}`,
+      })
+    : "";
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-offer/40 bg-offer/5 p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-offer">Collect ₹{amount.toFixed(0)} at the door</p>
+      <div className="grid grid-cols-2 gap-2">
+        {(["cash", "upi_qr"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => onMethod(m)}
+            className={`press rounded-xl py-2.5 text-xs font-bold ${method === m ? "bg-primary text-primary-foreground" : "border border-border bg-surface"}`}
+          >
+            {m === "cash" ? "Cash" : "Dynamic UPI QR"}
+          </button>
+        ))}
+      </div>
+      {method === "upi_qr" && (
+        qrValue ? (
+          <div className="rounded-xl border border-border bg-card p-3 text-center">
+            <QrCode value={qrValue} size={200} showDownloads={false} fileName={`order-${orderId.slice(0, 6)}`} />
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Customer scans this — money goes directly to the company account, not your cash limit.
+            </p>
+          </div>
+        ) : (
+          <p className="text-[11px] font-semibold text-destructive">Admin has not configured a UPI ID yet — collect cash.</p>
+        )
+      )}
+    </div>
+  );
+}
+
 /** Rider enters the customer's 4-digit code to close out the delivery. */
-function PinComplete({ orderId }: { orderId: string }) {
+function PinComplete({ order }: { order: Order }) {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
+  const [collect, setCollect] = useState<"cash" | "upi_qr">("cash");
   const complete = useServerFn(completeDelivery);
+  const isCod = order.payment_method === "cod";
 
   async function submit() {
-    if (!/^\d{4}$/.test(pin)) return toast.error("Enter the 4-digit code from the customer");
+    const code = String(pin).trim();
+    if (!/^\d{4}$/.test(code)) return toast.error("Enter the 4-digit code from the customer");
     setBusy(true);
     try {
-      const res = await complete({ data: { order_id: orderId, pin } });
+      const res = await complete({
+        data: { order_id: order.id, pin: code, ...(isCod ? { cod_collect_method: collect } : {}) },
+      });
+      toast.dismiss();
       toast.success(`Delivered! ₹${res.earned} added to your earnings`);
       setPin("");
     } catch (e) {
@@ -470,27 +553,33 @@ function PinComplete({ orderId }: { orderId: string }) {
   }
 
   return (
-    <div className="space-y-2 rounded-2xl border border-fresh/40 bg-fresh/5 p-3">
-      <p className="text-xs font-bold uppercase tracking-wide text-fresh">Complete delivery with OTP</p>
-      <input
-        inputMode="numeric"
-        maxLength={4}
-        value={pin}
-        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-        placeholder="••••"
-        aria-label="Delivery OTP"
-        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-center text-2xl font-black tracking-[0.4em] outline-none focus:border-primary"
-      />
-      <button
-        onClick={submit}
-        disabled={busy || pin.length !== 4}
-        className="press w-full rounded-full bg-fresh py-3 text-sm font-bold text-fresh-foreground disabled:opacity-50"
-      >
-        {busy ? "Verifying…" : "Complete Delivery with OTP"}
-      </button>
+    <div className="space-y-2">
+      {isCod && (
+        <CodCollect orderId={order.id} amount={Number(order.total)} method={collect} onMethod={setCollect} />
+      )}
+      <div className="space-y-2 rounded-2xl border border-fresh/40 bg-fresh/5 p-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-fresh">Complete delivery with OTP</p>
+        <input
+          inputMode="numeric"
+          maxLength={4}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          placeholder="••••"
+          aria-label="Delivery OTP"
+          className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-center text-2xl font-black tracking-[0.4em] outline-none focus:border-primary"
+        />
+        <button
+          onClick={submit}
+          disabled={busy || pin.trim().length !== 4}
+          className="press w-full rounded-full bg-fresh py-3 text-sm font-bold text-fresh-foreground disabled:opacity-50"
+        >
+          {busy ? "Verifying…" : "Complete Delivery with OTP"}
+        </button>
+      </div>
     </div>
   );
 }
+
 
 function Onboard({ status }: { status: "none" | "pending" | "rejected" | "approved" }) {
   if (status === "pending") return <SimpleCard title="Awaiting approval" body="Your ID is under review by admin." />;
@@ -519,12 +608,13 @@ function SimpleCard({ title, body }: { title: string; body: string }) {
 }
 
 function PartnerSignupForm({ role }: { role: "delivery" | "kitchen" }) {
-  const [form, setForm] = useState({ full_name: "", phone: "", vehicle_number: "" });
+  const [form, setForm] = useState({ full_name: "", phone: "", vehicle_number: "", upi_id: "" });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return toast.error("Upload ID proof");
+    if (!isValidUpiId(form.upi_id)) return toast.error("Enter a valid UPI ID, e.g. 9876543210@ybl");
     setBusy(true);
     try {
       const { data: u } = await supabase.auth.getUser();
@@ -532,11 +622,13 @@ function PartnerSignupForm({ role }: { role: "delivery" | "kitchen" }) {
       const path = `${u.user.id}/${role}-${Date.now()}-${file.name}`;
       const up = await supabase.storage.from("id-proofs").upload(path, file);
       if (up.error) throw up.error;
+      const upi = form.upi_id.trim();
       const { error } = await supabase.from("partner_verifications").insert({
         user_id: u.user.id, requested_role: role, full_name: form.full_name, phone: form.phone,
-        vehicle_number: form.vehicle_number || null, id_proof_path: path, status: "pending",
+        vehicle_number: form.vehicle_number || null, id_proof_path: path, status: "pending", upi_id: upi,
       });
       if (error) throw error;
+      await supabase.from("profiles").update({ upi_id: upi }).eq("id", u.user.id);
       toast.success("Submitted");
       window.location.reload();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); } finally { setBusy(false); }
@@ -546,6 +638,8 @@ function PartnerSignupForm({ role }: { role: "delivery" | "kitchen" }) {
       <input placeholder="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm" />
       <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm" />
       {role === "delivery" && <input placeholder="Vehicle number" value={form.vehicle_number} onChange={(e) => setForm({ ...form, vehicle_number: e.target.value })} className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm" />}
+      <input placeholder="Real UPI ID (e.g. name@okicici)" aria-label="Real UPI ID" value={form.upi_id} onChange={(e) => setForm({ ...form, upi_id: e.target.value.trim() })} className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm" />
+      <p className="text-[11px] text-muted-foreground">Required — your daily earnings are settled to this UPI ID.</p>
       <label className="press flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed border-border bg-surface p-4 text-sm active:bg-accent">
         {file ? file.name : "Upload ID proof"}
         <input type="file" hidden accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
@@ -556,3 +650,4 @@ function PartnerSignupForm({ role }: { role: "delivery" | "kitchen" }) {
     </form>
   );
 }
+

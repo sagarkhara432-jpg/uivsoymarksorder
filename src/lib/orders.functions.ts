@@ -270,10 +270,16 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
   });
 
 
+const FourDigitPin = z
+  .string()
+  .transform((s) => s.trim())
+  .pipe(z.string().regex(/^\d{4}$/, "Enter the 4-digit code"));
+
 const PickupInput = z.object({
   order_id: z.string().uuid(),
-  pin: z.string().regex(/^\d{4}$/, "Enter the 4-digit kitchen code"),
+  pin: FourDigitPin,
 });
+
 
 /**
  * Stage 1 of the handover: the rider types the kitchen's 4-digit code. The code
@@ -320,8 +326,10 @@ export const verifyPickup = createServerFn({ method: "POST" })
 
 const CompleteInput = z.object({
   order_id: z.string().uuid(),
-  pin: z.string().regex(/^\d{4}$/, "Enter the 4-digit code"),
+  pin: FourDigitPin,
+  cod_collect_method: z.enum(["cash", "upi_qr"]).optional(),
 });
+
 
 /**
  * Rider-side delivery completion. The PIN never leaves the database — it is
@@ -360,6 +368,17 @@ export const completeDelivery = createServerFn({ method: "POST" })
     if (uErr) throw new Error(uErr.message);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Cash-vs-QR is a settlement fact, so it is written with elevated rights:
+    // the order trigger deliberately blocks riders from touching payment fields.
+    if (data.cod_collect_method) {
+      await supabaseAdmin
+        .from("orders")
+        .update({ cod_collect_method: data.cod_collect_method, payment_status: "paid" })
+        .eq("id", data.order_id)
+        .eq("payment_method", "cod");
+    }
+
     const { data: settings } = await supabase
       .from("app_settings")
       .select("per_km_rate, rider_incentive_amount, rider_incentive_km")
