@@ -129,10 +129,11 @@ export default function PaymentSheet({ open, total, settings, busy, onClose, onC
             </div>
 
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <AppLink href={upiLink("tez://upi/pay", settings, total, note)} label="GPay" />
-              <AppLink href={upiLink("phonepe://pay", settings, total, note)} label="PhonePe" />
-              <AppLink href={upiLink("paytmmp://pay", settings, total, note)} label="Paytm" />
+              <AppLink href={link("tez://upi/pay")} label="GPay" />
+              <AppLink href={link("phonepe://pay")} label="PhonePe" />
+              <AppLink href={link("paytmmp://pay")} label="Paytm" />
             </div>
+
 
             <button
               disabled={busy}
