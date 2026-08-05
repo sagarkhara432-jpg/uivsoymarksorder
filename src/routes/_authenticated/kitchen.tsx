@@ -454,6 +454,17 @@ function PartnerOnboard({ role, status }: { role: "kitchen" | "delivery"; status
         {role === "delivery" && (
           <input placeholder="Vehicle number" value={form.vehicle_number} onChange={(e) => setForm({ ...form, vehicle_number: e.target.value })} className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary" />
         )}
+        <div>
+          <input
+            placeholder="Real UPI ID (e.g. name@okicici)"
+            value={form.upi_id}
+            onChange={(e) => setForm({ ...form, upi_id: e.target.value.trim() })}
+            aria-label="Real UPI ID"
+            className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary"
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">Required — all your earnings are settled to this UPI ID.</p>
+        </div>
+
         <label className="press flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface p-4 text-center text-sm active:bg-accent">
           {file ? <span className="font-semibold text-fresh">Selected: {file.name}</span> : <><span className="font-semibold">Upload ID proof</span><span className="text-xs text-muted-foreground">JPG or PDF, up to 5MB</span></>}
           <input type="file" accept="image/*,application/pdf" hidden onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
