@@ -581,6 +581,7 @@ export type Database = {
           address_tag: string | null
           building: string | null
           city: string | null
+          cod_collect_method: string | null
           commission_percent: number
           created_at: string
           customer_id: string
@@ -622,6 +623,7 @@ export type Database = {
           address_tag?: string | null
           building?: string | null
           city?: string | null
+          cod_collect_method?: string | null
           commission_percent?: number
           created_at?: string
           customer_id: string
@@ -663,6 +665,7 @@ export type Database = {
           address_tag?: string | null
           building?: string | null
           city?: string | null
+          cod_collect_method?: string | null
           commission_percent?: number
           created_at?: string
           customer_id?: string
@@ -745,6 +748,7 @@ export type Database = {
           requested_role: Database["public"]["Enums"]["app_role"]
           status: Database["public"]["Enums"]["verification_status"]
           updated_at: string
+          upi_id: string | null
           user_id: string
           vehicle_number: string | null
         }
@@ -760,6 +764,7 @@ export type Database = {
           requested_role: Database["public"]["Enums"]["app_role"]
           status?: Database["public"]["Enums"]["verification_status"]
           updated_at?: string
+          upi_id?: string | null
           user_id: string
           vehicle_number?: string | null
         }
@@ -775,6 +780,7 @@ export type Database = {
           requested_role?: Database["public"]["Enums"]["app_role"]
           status?: Database["public"]["Enums"]["verification_status"]
           updated_at?: string
+          upi_id?: string | null
           user_id?: string
           vehicle_number?: string | null
         }
@@ -826,6 +832,7 @@ export type Database = {
           pincode: string | null
           profile_completed: boolean
           updated_at: string
+          upi_id: string | null
         }
         Insert: {
           address_line?: string | null
@@ -842,6 +849,7 @@ export type Database = {
           pincode?: string | null
           profile_completed?: boolean
           updated_at?: string
+          upi_id?: string | null
         }
         Update: {
           address_line?: string | null
@@ -858,6 +866,7 @@ export type Database = {
           pincode?: string | null
           profile_completed?: boolean
           updated_at?: string
+          upi_id?: string | null
         }
         Relationships: []
       }
@@ -881,7 +890,9 @@ export type Database = {
           phone: string | null
           pincode: string | null
           status: string
+          store_type: string
           updated_at: string
+          upi_id: string | null
         }
         Insert: {
           address_line?: string | null
@@ -902,7 +913,9 @@ export type Database = {
           phone?: string | null
           pincode?: string | null
           status?: string
+          store_type?: string
           updated_at?: string
+          upi_id?: string | null
         }
         Update: {
           address_line?: string | null
@@ -923,7 +936,9 @@ export type Database = {
           phone?: string | null
           pincode?: string | null
           status?: string
+          store_type?: string
           updated_at?: string
+          upi_id?: string | null
         }
         Relationships: []
       }
