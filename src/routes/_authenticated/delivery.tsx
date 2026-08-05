@@ -519,12 +519,13 @@ function SimpleCard({ title, body }: { title: string; body: string }) {
 }
 
 function PartnerSignupForm({ role }: { role: "delivery" | "kitchen" }) {
-  const [form, setForm] = useState({ full_name: "", phone: "", vehicle_number: "" });
+  const [form, setForm] = useState({ full_name: "", phone: "", vehicle_number: "", upi_id: "" });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return toast.error("Upload ID proof");
+    if (!isValidUpiId(form.upi_id)) return toast.error("Enter a valid UPI ID, e.g. 9876543210@ybl");
     setBusy(true);
     try {
       const { data: u } = await supabase.auth.getUser();
@@ -532,11 +533,13 @@ function PartnerSignupForm({ role }: { role: "delivery" | "kitchen" }) {
       const path = `${u.user.id}/${role}-${Date.now()}-${file.name}`;
       const up = await supabase.storage.from("id-proofs").upload(path, file);
       if (up.error) throw up.error;
+      const upi = form.upi_id.trim();
       const { error } = await supabase.from("partner_verifications").insert({
         user_id: u.user.id, requested_role: role, full_name: form.full_name, phone: form.phone,
-        vehicle_number: form.vehicle_number || null, id_proof_path: path, status: "pending",
+        vehicle_number: form.vehicle_number || null, id_proof_path: path, status: "pending", upi_id: upi,
       });
       if (error) throw error;
+      await supabase.from("profiles").update({ upi_id: upi }).eq("id", u.user.id);
       toast.success("Submitted");
       window.location.reload();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); } finally { setBusy(false); }
@@ -546,6 +549,8 @@ function PartnerSignupForm({ role }: { role: "delivery" | "kitchen" }) {
       <input placeholder="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm" />
       <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm" />
       {role === "delivery" && <input placeholder="Vehicle number" value={form.vehicle_number} onChange={(e) => setForm({ ...form, vehicle_number: e.target.value })} className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm" />}
+      <input placeholder="Real UPI ID (e.g. name@okicici)" aria-label="Real UPI ID" value={form.upi_id} onChange={(e) => setForm({ ...form, upi_id: e.target.value.trim() })} className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm" />
+      <p className="text-[11px] text-muted-foreground">Required — your daily earnings are settled to this UPI ID.</p>
       <label className="press flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed border-border bg-surface p-4 text-sm active:bg-accent">
         {file ? file.name : "Upload ID proof"}
         <input type="file" hidden accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
@@ -556,3 +561,4 @@ function PartnerSignupForm({ role }: { role: "delivery" | "kitchen" }) {
     </form>
   );
 }
+
