@@ -326,8 +326,10 @@ export const verifyPickup = createServerFn({ method: "POST" })
 
 const CompleteInput = z.object({
   order_id: z.string().uuid(),
-  pin: z.string().regex(/^\d{4}$/, "Enter the 4-digit code"),
+  pin: FourDigitPin,
+  cod_collect_method: z.enum(["cash", "upi_qr"]).optional(),
 });
+
 
 /**
  * Rider-side delivery completion. The PIN never leaves the database — it is
