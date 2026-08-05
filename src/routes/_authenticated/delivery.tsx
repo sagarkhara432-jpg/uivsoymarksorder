@@ -421,18 +421,23 @@ function Stat({ icon, label, value, hint }: { icon: React.ReactNode; label: stri
 }
 
 /** Stage 1: rider enters the kitchen's 4-digit handover code to unlock the drop. */
-function PickupPinVerify({ orderId }: { orderId: string }) {
+function PickupPinVerify({ orderId, onVerified }: { orderId: string; onVerified: () => void }) {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const verify = useServerFn(verifyPickup);
 
   async function submit() {
-    if (!/^\d{4}$/.test(pin)) return toast.error("Enter the 4-digit code from the kitchen");
+    // Codes are compared as trimmed strings on both sides, so a stray space or
+    // a numeric-typed value from the kitchen never causes a false mismatch.
+    const code = String(pin).trim();
+    if (!/^\d{4}$/.test(code)) return toast.error("Enter the 4-digit code from the kitchen");
     setBusy(true);
     try {
-      await verify({ data: { order_id: orderId, pin } });
+      await verify({ data: { order_id: orderId, pin: code } });
+      toast.dismiss();
       toast.success("Pickup confirmed — customer details unlocked");
       setPin("");
+      onVerified();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
@@ -454,7 +459,7 @@ function PickupPinVerify({ orderId }: { orderId: string }) {
       />
       <button
         onClick={submit}
-        disabled={busy || pin.length !== 4}
+        disabled={busy || pin.trim().length !== 4}
         className="press w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
       >
         {busy ? "Verifying…" : "Verify Kitchen Pickup"}
@@ -463,17 +468,81 @@ function PickupPinVerify({ orderId }: { orderId: string }) {
   );
 }
 
+/**
+ * Doorstep collection for COD orders: cash in hand, or a dynamic UPI QR that
+ * settles straight into the admin account (so it never touches the rider's
+ * cash-in-hand limit).
+ */
+function CodCollect({
+  orderId,
+  amount,
+  method,
+  onMethod,
+}: {
+  orderId: string;
+  amount: number;
+  method: "cash" | "upi_qr";
+  onMethod: (m: "cash" | "upi_qr") => void;
+}) {
+  const { settings } = useAppSettings();
+  const upiId = settings?.upi_id?.trim() ?? "";
+  const qrValue = isValidUpiId(upiId)
+    ? upiDeepLink("upi://pay", {
+        pa: upiId,
+        pn: settings?.upi_merchant_name || settings?.app_name || "Uivsoymarks",
+        am: amount,
+        tr: orderId,
+        tn: `Order ${orderId.slice(0, 6)}`,
+      })
+    : "";
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-offer/40 bg-offer/5 p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-offer">Collect ₹{amount.toFixed(0)} at the door</p>
+      <div className="grid grid-cols-2 gap-2">
+        {(["cash", "upi_qr"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => onMethod(m)}
+            className={`press rounded-xl py-2.5 text-xs font-bold ${method === m ? "bg-primary text-primary-foreground" : "border border-border bg-surface"}`}
+          >
+            {m === "cash" ? "Cash" : "Dynamic UPI QR"}
+          </button>
+        ))}
+      </div>
+      {method === "upi_qr" && (
+        qrValue ? (
+          <div className="rounded-xl border border-border bg-card p-3 text-center">
+            <QrCode value={qrValue} size={200} showDownloads={false} fileName={`order-${orderId.slice(0, 6)}`} />
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Customer scans this — money goes directly to the company account, not your cash limit.
+            </p>
+          </div>
+        ) : (
+          <p className="text-[11px] font-semibold text-destructive">Admin has not configured a UPI ID yet — collect cash.</p>
+        )
+      )}
+    </div>
+  );
+}
+
 /** Rider enters the customer's 4-digit code to close out the delivery. */
-function PinComplete({ orderId }: { orderId: string }) {
+function PinComplete({ order }: { order: Order }) {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
+  const [collect, setCollect] = useState<"cash" | "upi_qr">("cash");
   const complete = useServerFn(completeDelivery);
+  const isCod = order.payment_method === "cod";
 
   async function submit() {
-    if (!/^\d{4}$/.test(pin)) return toast.error("Enter the 4-digit code from the customer");
+    const code = String(pin).trim();
+    if (!/^\d{4}$/.test(code)) return toast.error("Enter the 4-digit code from the customer");
     setBusy(true);
     try {
-      const res = await complete({ data: { order_id: orderId, pin } });
+      const res = await complete({
+        data: { order_id: order.id, pin: code, ...(isCod ? { cod_collect_method: collect } : {}) },
+      });
+      toast.dismiss();
       toast.success(`Delivered! ₹${res.earned} added to your earnings`);
       setPin("");
     } catch (e) {
@@ -484,27 +553,33 @@ function PinComplete({ orderId }: { orderId: string }) {
   }
 
   return (
-    <div className="space-y-2 rounded-2xl border border-fresh/40 bg-fresh/5 p-3">
-      <p className="text-xs font-bold uppercase tracking-wide text-fresh">Complete delivery with OTP</p>
-      <input
-        inputMode="numeric"
-        maxLength={4}
-        value={pin}
-        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-        placeholder="••••"
-        aria-label="Delivery OTP"
-        className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-center text-2xl font-black tracking-[0.4em] outline-none focus:border-primary"
-      />
-      <button
-        onClick={submit}
-        disabled={busy || pin.length !== 4}
-        className="press w-full rounded-full bg-fresh py-3 text-sm font-bold text-fresh-foreground disabled:opacity-50"
-      >
-        {busy ? "Verifying…" : "Complete Delivery with OTP"}
-      </button>
+    <div className="space-y-2">
+      {isCod && (
+        <CodCollect orderId={order.id} amount={Number(order.total)} method={collect} onMethod={setCollect} />
+      )}
+      <div className="space-y-2 rounded-2xl border border-fresh/40 bg-fresh/5 p-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-fresh">Complete delivery with OTP</p>
+        <input
+          inputMode="numeric"
+          maxLength={4}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          placeholder="••••"
+          aria-label="Delivery OTP"
+          className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-center text-2xl font-black tracking-[0.4em] outline-none focus:border-primary"
+        />
+        <button
+          onClick={submit}
+          disabled={busy || pin.trim().length !== 4}
+          className="press w-full rounded-full bg-fresh py-3 text-sm font-bold text-fresh-foreground disabled:opacity-50"
+        >
+          {busy ? "Verifying…" : "Complete Delivery with OTP"}
+        </button>
+      </div>
     </div>
   );
 }
+
 
 function Onboard({ status }: { status: "none" | "pending" | "rejected" | "approved" }) {
   if (status === "pending") return <SimpleCard title="Awaiting approval" body="Your ID is under review by admin." />;
