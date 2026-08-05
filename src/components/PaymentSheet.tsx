@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, Smartphone, Banknote, CreditCard, Copy, Check, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import type { AppSettings } from "@/lib/settings";
+import { newPaymentRef, upiDeepLink, type UpiScheme } from "@/lib/upi";
 import QrCode from "./QrCode";
 import MediaImage from "./MediaImage";
 
@@ -16,26 +17,25 @@ type Props = {
   onConfirm: (method: PaymentMethod) => void;
 };
 
-/** Builds a standards-compliant UPI intent link from the admin's live config. */
-function upiLink(scheme: string, s: AppSettings | null, amount: number, note: string) {
-  const params = new URLSearchParams({
-    pa: s?.upi_id ?? "",
-    pn: s?.upi_merchant_name || s?.upi_holder_name || s?.app_name || "Uivsoymarks",
-    am: amount.toFixed(2),
-    cu: "INR",
-    tn: note,
-  });
-  return `${scheme}?${params.toString()}`;
-}
-
 export default function PaymentSheet({ open, total, settings, busy, onClose, onConfirm }: Props) {
   const [screen, setScreen] = useState<"choose" | "upi">("choose");
   const [copied, setCopied] = useState(false);
+  const [ref] = useState(newPaymentRef);
   if (!open) return null;
 
   const upiId = settings?.upi_id?.trim() || "";
   const note = `${settings?.app_name ?? "Uivsoymarks"} order`;
-  const payUrl = upiLink("upi://pay", settings, total, note);
+  /** Direct UPI intent — opens GPay / PhonePe / Paytm with no gateway involved. */
+  const link = (scheme: UpiScheme) =>
+    upiDeepLink(scheme, {
+      pa: upiId,
+      pn: settings?.upi_merchant_name || settings?.upi_holder_name || settings?.app_name || "Uivsoymarks",
+      am: total,
+      tr: ref,
+      tn: note,
+    });
+  const payUrl = link("upi://pay");
+
 
   const methods: { id: PaymentMethod; label: string; hint: string; icon: React.ReactNode; enabled: boolean }[] = [
     {
