@@ -238,9 +238,16 @@ function DeliveryPage() {
                 </div>
 
                 {/* Payment badge */}
-                <div className="inline-flex items-center gap-2 rounded-full bg-fresh/15 px-3 py-1.5 text-xs font-bold text-fresh">
-                  <BadgeIndianRupee className="h-4 w-4" /> Prepaid — collect nothing (₹{order.total} paid online)
-                </div>
+                {order.payment_method === "cod" ? (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-offer/20 px-3 py-1.5 text-xs font-bold text-offer">
+                    <BadgeIndianRupee className="h-4 w-4" /> COD — collect ₹{order.total} at the door
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-fresh/15 px-3 py-1.5 text-xs font-bold text-fresh">
+                    <BadgeIndianRupee className="h-4 w-4" /> Prepaid — collect nothing (₹{order.total} paid online)
+                  </div>
+                )}
+
 
                 {/* Pick-up */}
                 <div className="rounded-2xl border border-border/60 bg-surface p-3">
