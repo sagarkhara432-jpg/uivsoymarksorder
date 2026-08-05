@@ -44,7 +44,9 @@ type Order = {
   customer_name: string | null; lat: number | null; lng: number | null; partner_id: string | null;
   restaurant_id: string | null; house_no: string | null; building: string | null; landmark: string | null;
   rider_payout: number | null; is_kitchen_verified: boolean;
+  payment_method: string | null; payment_status: string | null;
 };
+
 
 
 type Stage = "assigned" | "at_store" | "picked" | "at_customer";
