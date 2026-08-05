@@ -109,7 +109,7 @@ function DeliveryPage() {
       // A rider can hold more than one assignment; take the most urgent one
       // instead of maybeSingle(), which errors out when several rows match.
       const { data } = await supabase.from("orders")
-        .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id, restaurant_id, house_no, building, landmark, rider_payout, is_kitchen_verified")
+        .select("id, status, total, address_line, phone, customer_name, lat, lng, partner_id, restaurant_id, house_no, building, landmark, rider_payout, is_kitchen_verified, payment_method, payment_status")
         .eq("partner_id", uid!)
         .in("status", ["accepted", "preparing", "packed", "out_for_delivery"])
         .order("placed_at", { ascending: true })
