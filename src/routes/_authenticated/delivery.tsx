@@ -312,7 +312,7 @@ function DeliveryPage() {
                 )}
                 {acked && (stage === "at_store" || (stage === "assigned" && order.status === "packed")) && (
                   order.status === "packed" ? (
-                    <PickupPinVerify orderId={order.id} />
+                    <PickupPinVerify orderId={order.id} onVerified={() => setStage("picked")} />
                   ) : (
                     <p className="rounded-full bg-muted py-2 text-center text-xs font-semibold text-muted-foreground">Waiting for kitchen to pack the order…</p>
                   )
@@ -320,6 +320,7 @@ function DeliveryPage() {
                 {acked && stage === "picked" && (
                   <button onClick={() => { setStage("at_customer"); toast.success("Marked arrived at customer"); }} className="press w-full rounded-full bg-offer py-3 text-sm font-bold text-offer-foreground active:opacity-90">
                     Arrived at Customer
+
                   </button>
                 )}
                 {acked && stage === "at_customer" && <PinComplete orderId={order.id} />}
