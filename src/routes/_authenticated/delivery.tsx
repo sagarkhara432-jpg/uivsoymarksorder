@@ -323,7 +323,7 @@ function DeliveryPage() {
 
                   </button>
                 )}
-                {acked && stage === "at_customer" && <PinComplete orderId={order.id} />}
+                {acked && stage === "at_customer" && <PinComplete order={order} />}
 
 
                 <StepTrail stage={acked ? stage : "assigned"} acked={!!acked} />
