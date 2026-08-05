@@ -368,6 +368,17 @@ export const completeDelivery = createServerFn({ method: "POST" })
     if (uErr) throw new Error(uErr.message);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Cash-vs-QR is a settlement fact, so it is written with elevated rights:
+    // the order trigger deliberately blocks riders from touching payment fields.
+    if (data.cod_collect_method) {
+      await supabaseAdmin
+        .from("orders")
+        .update({ cod_collect_method: data.cod_collect_method, payment_status: "paid" })
+        .eq("id", data.order_id)
+        .eq("payment_method", "cod");
+    }
+
     const { data: settings } = await supabase
       .from("app_settings")
       .select("per_km_rate, rider_incentive_amount, rider_incentive_km")
