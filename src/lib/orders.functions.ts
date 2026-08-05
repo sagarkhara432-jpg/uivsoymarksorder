@@ -270,10 +270,16 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
   });
 
 
+const FourDigitPin = z
+  .string()
+  .transform((s) => s.trim())
+  .pipe(z.string().regex(/^\d{4}$/, "Enter the 4-digit code"));
+
 const PickupInput = z.object({
   order_id: z.string().uuid(),
-  pin: z.string().regex(/^\d{4}$/, "Enter the 4-digit kitchen code"),
+  pin: FourDigitPin,
 });
+
 
 /**
  * Stage 1 of the handover: the rider types the kitchen's 4-digit code. The code
