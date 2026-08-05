@@ -10,6 +10,8 @@ import { useOrderAlarm } from "@/hooks/use-order-alarm";
 import MediaImage from "@/components/MediaImage";
 import KitchenLocationCard from "@/components/KitchenLocationCard";
 import { commissionSplit, useAppSettings } from "@/lib/settings";
+import { isValidUpiId } from "@/lib/upi";
+
 
 
 export const Route = createFileRoute("/_authenticated/kitchen")({
