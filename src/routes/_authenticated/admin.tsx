@@ -282,7 +282,10 @@ function MenuEditCard({ item, cats, onCancel, onSave }: { item: any; cats: any[]
       <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
       <input type="number" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
       <input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Description" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
-      <input value={f.image_url} onChange={(e) => setF({ ...f, image_url: e.target.value })} placeholder="Image URL" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <div className="rounded-xl border border-border bg-surface px-3 py-2">
+        <p className="mb-1 text-[11px] font-bold uppercase text-muted-foreground">Dish photo</p>
+        <ImageUploadInput value={f.image_url || null} onChange={(p: string | null) => setF({ ...f, image_url: p ?? "" })} folder="menu" label="Upload photo" />
+      </div>
       <select value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
         <option value="">— category —</option>
         {cats.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
