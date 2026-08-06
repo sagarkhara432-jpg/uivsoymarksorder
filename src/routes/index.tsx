@@ -79,6 +79,7 @@ function Landing() {
         </div>
       </section>
 
+      <PromoStrip />
       {user && <ActiveOrderBanner />}
     </div>
   );
