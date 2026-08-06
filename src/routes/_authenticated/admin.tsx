@@ -2,14 +2,18 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Store, Bike, Wallet, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X } from "lucide-react";
+import { Shield, Store, Bike, Wallet, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X, Film } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { decideVerification } from "@/lib/admin.functions";
 import { AlertsBell } from "@/components/AdminAlerts";
 import MetricsBar from "@/components/admin/MetricsBar";
 import KitchensTab from "@/components/admin/KitchensTab";
 import RidersTab from "@/components/admin/RidersTab";
+import RiderRatesCard from "@/components/admin/RiderRatesCard";
 import PaymentsTab from "@/components/admin/PaymentsTab";
+import MediaTab from "@/components/admin/MediaTab";
+import ImageUploadInput from "@/components/ImageUploadInput";
+import MediaImage from "@/components/MediaImage";
 import OrderOverride from "@/components/admin/OrderOverride";
 
 
