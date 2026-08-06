@@ -2,14 +2,18 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Store, Bike, Wallet, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X } from "lucide-react";
+import { Shield, Store, Bike, Wallet, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X, Film } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { decideVerification } from "@/lib/admin.functions";
 import { AlertsBell } from "@/components/AdminAlerts";
 import MetricsBar from "@/components/admin/MetricsBar";
 import KitchensTab from "@/components/admin/KitchensTab";
 import RidersTab from "@/components/admin/RidersTab";
+import RiderRatesCard from "@/components/admin/RiderRatesCard";
 import PaymentsTab from "@/components/admin/PaymentsTab";
+import MediaTab from "@/components/admin/MediaTab";
+import ImageUploadInput from "@/components/ImageUploadInput";
+import MediaImage from "@/components/MediaImage";
 import OrderOverride from "@/components/admin/OrderOverride";
 
 
@@ -24,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type Tab = "orders" | "kitchens" | "riders" | "payments" | "menu" | "partners" | "offers" | "users" | "audit";
+type Tab = "orders" | "kitchens" | "riders" | "payments" | "media" | "menu" | "partners" | "offers" | "users" | "audit";
 
 function AdminPage() {
   const nav = useNavigate();
@@ -82,6 +86,7 @@ function AdminPage() {
           <TabBtn active={tab==="kitchens"} onClick={() => setTab("kitchens")} icon={<Store className="h-4 w-4" />} label="Kitchens" />
           <TabBtn active={tab==="riders"} onClick={() => setTab("riders")} icon={<Bike className="h-4 w-4" />} label="Riders" />
           <TabBtn active={tab==="payments"} onClick={() => setTab("payments")} icon={<Wallet className="h-4 w-4" />} label="Payments & QR" />
+          <TabBtn active={tab==="media"} onClick={() => setTab("media")} icon={<Film className="h-4 w-4" />} label="Banners & video" />
           <TabBtn active={tab==="menu"} onClick={() => setTab("menu")} icon={<MenuIcon className="h-4 w-4" />} label="Menu" />
           <TabBtn active={tab==="partners"} onClick={() => setTab("partners")} icon={<Users className="h-4 w-4" />} label="Partners" />
           <TabBtn active={tab==="offers"} onClick={() => setTab("offers")} icon={<Tag className="h-4 w-4" />} label="Offers" />
@@ -93,8 +98,9 @@ function AdminPage() {
         <MetricsBar />
         {tab === "orders" && <OrdersTab />}
         {tab === "kitchens" && <KitchensTab />}
-        {tab === "riders" && <RidersTab />}
+        {tab === "riders" && <><RiderRatesCard /><RidersTab /></>}
         {tab === "payments" && <PaymentsTab />}
+        {tab === "media" && <MediaTab />}
         {tab === "menu" && <MenuTab />}
         {tab === "partners" && <PartnersTab />}
         {tab === "offers" && <OffersTab />}
@@ -217,7 +223,10 @@ function MenuTab() {
         <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
         <input type="number" placeholder="Price ₹" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
         <input placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-2" />
-        <input placeholder="Image URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-2" />
+        <div className="rounded-xl border border-border bg-surface px-3 py-2 sm:col-span-2">
+          <p className="mb-1 text-[11px] font-bold uppercase text-muted-foreground">Dish photo</p>
+          <ImageUploadInput value={form.image_url || null} onChange={(p: string | null) => setForm({ ...form, image_url: p ?? "" })} folder="menu" label="Upload photo" />
+        </div>
         <select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
           <option value="">— category —</option>
           {cats.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
@@ -254,7 +263,7 @@ function MenuTab() {
           <MenuEditCard key={i.id} item={i} cats={cats} onCancel={() => setEditId(null)} onSave={saveItem} />
         ) : (
           <div key={i.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3">
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted">{i.image_url && <img src={i.image_url} alt="" className="h-full w-full object-cover" />}</div>
+            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted"><MediaImage src={i.image_url} alt={i.name} className="h-full w-full object-cover" fallback="🍽️" /></div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{i.name}</p>
               <p className="text-xs text-muted-foreground">₹{i.price}{i.is_veg ? " · veg" : " · non-veg"}</p>
@@ -279,7 +288,10 @@ function MenuEditCard({ item, cats, onCancel, onSave }: { item: any; cats: any[]
       <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
       <input type="number" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
       <input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Description" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
-      <input value={f.image_url} onChange={(e) => setF({ ...f, image_url: e.target.value })} placeholder="Image URL" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+      <div className="rounded-xl border border-border bg-surface px-3 py-2">
+        <p className="mb-1 text-[11px] font-bold uppercase text-muted-foreground">Dish photo</p>
+        <ImageUploadInput value={f.image_url || null} onChange={(p: string | null) => setF({ ...f, image_url: p ?? "" })} folder="menu" label="Upload photo" />
+      </div>
       <select value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
         <option value="">— category —</option>
         {cats.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
