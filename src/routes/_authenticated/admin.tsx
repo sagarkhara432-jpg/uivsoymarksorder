@@ -263,7 +263,7 @@ function MenuTab() {
           <MenuEditCard key={i.id} item={i} cats={cats} onCancel={() => setEditId(null)} onSave={saveItem} />
         ) : (
           <div key={i.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-3">
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted">{i.image_url && <img src={i.image_url} alt="" className="h-full w-full object-cover" />}</div>
+            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted"><MediaImage src={i.image_url} alt={i.name} className="h-full w-full object-cover" fallback="🍽️" /></div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{i.name}</p>
               <p className="text-xs text-muted-foreground">₹{i.price}{i.is_veg ? " · veg" : " · non-veg"}</p>
