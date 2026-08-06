@@ -202,49 +202,55 @@ export type Database = {
           clicks: number
           created_at: string
           id: string
-          image_url: string
+          image_url: string | null
           impressions: number
           is_active: boolean
           is_sponsored: boolean
           link_url: string | null
+          media_type: string
           menu_item_id: string | null
           restaurant_id: string | null
           sort_order: number
           subtitle: string | null
           title: string | null
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           clicks?: number
           created_at?: string
           id?: string
-          image_url: string
+          image_url?: string | null
           impressions?: number
           is_active?: boolean
           is_sponsored?: boolean
           link_url?: string | null
+          media_type?: string
           menu_item_id?: string | null
           restaurant_id?: string | null
           sort_order?: number
           subtitle?: string | null
           title?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           clicks?: number
           created_at?: string
           id?: string
-          image_url?: string
+          image_url?: string | null
           impressions?: number
           is_active?: boolean
           is_sponsored?: boolean
           link_url?: string | null
+          media_type?: string
           menu_item_id?: string | null
           restaurant_id?: string | null
           sort_order?: number
           subtitle?: string | null
           title?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {
