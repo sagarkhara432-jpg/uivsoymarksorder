@@ -1045,10 +1045,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      verify_delivery_pin: {
-        Args: { _order_id: string; _pin: string }
-        Returns: boolean
-      }
     }
     Enums: {
       app_role: "customer" | "kitchen" | "delivery" | "admin"
