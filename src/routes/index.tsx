@@ -2,6 +2,7 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { ShoppingBag, ChefHat, Bike, ShieldCheck, Sparkles } from "lucide-react";
 import { useSession, useMyRoles, useMyProfile } from "@/lib/auth";
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
+import PromoStrip from "@/components/PromoStrip";
 
 export const Route = createFileRoute("/")({
   head: () => ({
