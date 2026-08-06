@@ -217,7 +217,10 @@ function MenuTab() {
         <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
         <input type="number" placeholder="Price ₹" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
         <input placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-2" />
-        <input placeholder="Image URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:col-span-2" />
+        <div className="rounded-xl border border-border bg-surface px-3 py-2 sm:col-span-2">
+          <p className="mb-1 text-[11px] font-bold uppercase text-muted-foreground">Dish photo</p>
+          <ImageUploadInput value={form.image_url || null} onChange={(p) => setForm({ ...form, image_url: p ?? "" })} folder="menu" label="Upload photo" />
+        </div>
         <select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} className="rounded-xl border border-border bg-surface px-3 py-2 text-sm">
           <option value="">— category —</option>
           {cats.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
