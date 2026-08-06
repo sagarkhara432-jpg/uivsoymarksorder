@@ -361,9 +361,37 @@ export type Database = {
           },
         ]
       }
+      menu_item_notes: {
+        Row: {
+          created_at: string
+          menu_item_id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          menu_item_id: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          menu_item_id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_notes_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: true
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
-          admin_notes: string | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -380,7 +408,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          admin_notes?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -397,7 +424,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          admin_notes?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
