@@ -98,8 +98,9 @@ function AdminPage() {
         <MetricsBar />
         {tab === "orders" && <OrdersTab />}
         {tab === "kitchens" && <KitchensTab />}
-        {tab === "riders" && <RidersTab />}
+        {tab === "riders" && <><RiderRatesCard /><RidersTab /></>}
         {tab === "payments" && <PaymentsTab />}
+        {tab === "media" && <MediaTab />}
         {tab === "menu" && <MenuTab />}
         {tab === "partners" && <PartnersTab />}
         {tab === "offers" && <OffersTab />}
