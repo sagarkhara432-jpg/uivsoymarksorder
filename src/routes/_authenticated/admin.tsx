@@ -86,6 +86,7 @@ function AdminPage() {
           <TabBtn active={tab==="kitchens"} onClick={() => setTab("kitchens")} icon={<Store className="h-4 w-4" />} label="Kitchens" />
           <TabBtn active={tab==="riders"} onClick={() => setTab("riders")} icon={<Bike className="h-4 w-4" />} label="Riders" />
           <TabBtn active={tab==="payments"} onClick={() => setTab("payments")} icon={<Wallet className="h-4 w-4" />} label="Payments & QR" />
+          <TabBtn active={tab==="media"} onClick={() => setTab("media")} icon={<Film className="h-4 w-4" />} label="Banners & video" />
           <TabBtn active={tab==="menu"} onClick={() => setTab("menu")} icon={<MenuIcon className="h-4 w-4" />} label="Menu" />
           <TabBtn active={tab==="partners"} onClick={() => setTab("partners")} icon={<Users className="h-4 w-4" />} label="Partners" />
           <TabBtn active={tab==="offers"} onClick={() => setTab("offers")} icon={<Tag className="h-4 w-4" />} label="Offers" />
