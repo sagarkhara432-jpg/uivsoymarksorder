@@ -36,7 +36,9 @@ export type Banner = {
   id: string;
   title: string | null;
   subtitle: string | null;
-  image_url: string;
+  image_url: string | null;
+  video_url: string | null;
+  media_type: string;
   link_url: string | null;
   sort_order: number;
   is_active: boolean;
