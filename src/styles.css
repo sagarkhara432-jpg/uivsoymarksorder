@@ -172,8 +172,13 @@
   animation: radar-spin 2s linear infinite;
 }
 
-/* Hide Lovable "Edit with Lovable" badge */
+/* Hide Lovable "Edit with Lovable" badge on all pages */
 #lovable-badge,
-[id*="lovable"] {
+[id*="lovable"],
+a[href*="lovable.dev"],
+div[class*="lovable"] {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
