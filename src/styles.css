@@ -171,3 +171,9 @@
   background: conic-gradient(from 0deg, transparent 0deg, color-mix(in oklab, var(--primary) 45%, transparent) 60deg, transparent 120deg);
   animation: radar-spin 2s linear infinite;
 }
+
+/* Hide Lovable "Edit with Lovable" badge */
+#lovable-badge,
+[id*="lovable"] {
+  display: none !important;
+}
