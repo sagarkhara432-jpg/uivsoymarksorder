@@ -23,6 +23,7 @@ import { Route as OrdersIndexRouteImport } from './routes/orders.index'
 import { Route as OrdersIdRouteImport } from './routes/orders.$id'
 import { Route as AuthenticatedKitchenRouteImport } from './routes/_authenticated/kitchen'
 import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticated/delivery'
+import { Route as AuthenticatedConsoleRouteImport } from './routes/_authenticated/console'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -94,6 +95,11 @@ const AuthenticatedDeliveryRoute = AuthenticatedDeliveryRouteImport.update({
   path: '/delivery',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedConsoleRoute = AuthenticatedConsoleRouteImport.update({
+  id: '/console',
+  path: '/console',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/console': typeof AuthenticatedConsoleRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/kitchen': typeof AuthenticatedKitchenRoute
   '/orders/$id': typeof OrdersIdRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/console': typeof AuthenticatedConsoleRoute
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/kitchen': typeof AuthenticatedKitchenRoute
   '/orders/$id': typeof OrdersIdRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/console': typeof AuthenticatedConsoleRoute
   '/_authenticated/delivery': typeof AuthenticatedDeliveryRoute
   '/_authenticated/kitchen': typeof AuthenticatedKitchenRoute
   '/orders/$id': typeof OrdersIdRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/sitemap.xml'
     | '/admin'
+    | '/console'
     | '/delivery'
     | '/kitchen'
     | '/orders/$id'
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/sitemap.xml'
     | '/admin'
+    | '/console'
     | '/delivery'
     | '/kitchen'
     | '/orders/$id'
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/sitemap.xml'
     | '/_authenticated/admin'
+    | '/_authenticated/console'
     | '/_authenticated/delivery'
     | '/_authenticated/kitchen'
     | '/orders/$id'
@@ -317,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDeliveryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/console': {
+      id: '/_authenticated/console'
+      path: '/console'
+      fullPath: '/console'
+      preLoaderRoute: typeof AuthenticatedConsoleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -329,12 +348,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedConsoleRoute: typeof AuthenticatedConsoleRoute
   AuthenticatedDeliveryRoute: typeof AuthenticatedDeliveryRoute
   AuthenticatedKitchenRoute: typeof AuthenticatedKitchenRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedConsoleRoute: AuthenticatedConsoleRoute,
   AuthenticatedDeliveryRoute: AuthenticatedDeliveryRoute,
   AuthenticatedKitchenRoute: AuthenticatedKitchenRoute,
 }
