@@ -23,7 +23,9 @@ import { Route as OrdersIndexRouteImport } from './routes/orders.index'
 import { Route as OrdersIdRouteImport } from './routes/orders.$id'
 import { Route as AuthenticatedKitchenRouteImport } from './routes/_authenticated/kitchen'
 import { Route as AuthenticatedDeliveryRouteImport } from './routes/_authenticated/delivery'
+import { Route as AuthenticatedConsoleRouteImport } from './routes/_authenticated/console'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedConsoleIndexRouteImport } from './routes/_authenticated/console.index'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -94,11 +96,22 @@ const AuthenticatedDeliveryRoute = AuthenticatedDeliveryRouteImport.update({
   path: '/delivery',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedConsoleRoute = AuthenticatedConsoleRouteImport.update({
+  id: '/console',
+  path: '/console',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedConsoleIndexRoute =
+  AuthenticatedConsoleIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedConsoleRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -111,10 +124,12 @@ export interface FileRoutesByFullPath {
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/console': typeof AuthenticatedConsoleRouteWithChildren
   '/delivery': typeof AuthenticatedDeliveryRoute
   '/kitchen': typeof AuthenticatedKitchenRoute
   '/orders/$id': typeof OrdersIdRoute
   '/orders/': typeof OrdersIndexRoute
+  '/console/': typeof AuthenticatedConsoleIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -131,6 +146,7 @@ export interface FileRoutesByTo {
   '/kitchen': typeof AuthenticatedKitchenRoute
   '/orders/$id': typeof OrdersIdRoute
   '/orders': typeof OrdersIndexRoute
+  '/console': typeof AuthenticatedConsoleIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -145,10 +161,12 @@ export interface FileRoutesById {
   '/partner': typeof PartnerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/console': typeof AuthenticatedConsoleRouteWithChildren
   '/_authenticated/delivery': typeof AuthenticatedDeliveryRoute
   '/_authenticated/kitchen': typeof AuthenticatedKitchenRoute
   '/orders/$id': typeof OrdersIdRoute
   '/orders/': typeof OrdersIndexRoute
+  '/_authenticated/console/': typeof AuthenticatedConsoleIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -163,10 +181,12 @@ export interface FileRouteTypes {
     | '/partner'
     | '/sitemap.xml'
     | '/admin'
+    | '/console'
     | '/delivery'
     | '/kitchen'
     | '/orders/$id'
     | '/orders/'
+    | '/console/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -183,6 +203,7 @@ export interface FileRouteTypes {
     | '/kitchen'
     | '/orders/$id'
     | '/orders'
+    | '/console'
   id:
     | '__root__'
     | '/'
@@ -196,10 +217,12 @@ export interface FileRouteTypes {
     | '/partner'
     | '/sitemap.xml'
     | '/_authenticated/admin'
+    | '/_authenticated/console'
     | '/_authenticated/delivery'
     | '/_authenticated/kitchen'
     | '/orders/$id'
     | '/orders/'
+    | '/_authenticated/console/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -317,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDeliveryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/console': {
+      id: '/_authenticated/console'
+      path: '/console'
+      fullPath: '/console'
+      preLoaderRoute: typeof AuthenticatedConsoleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -324,17 +354,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/console/': {
+      id: '/_authenticated/console/'
+      path: '/'
+      fullPath: '/console/'
+      preLoaderRoute: typeof AuthenticatedConsoleIndexRouteImport
+      parentRoute: typeof AuthenticatedConsoleRoute
+    }
   }
 }
 
+interface AuthenticatedConsoleRouteChildren {
+  AuthenticatedConsoleIndexRoute: typeof AuthenticatedConsoleIndexRoute
+}
+
+const AuthenticatedConsoleRouteChildren: AuthenticatedConsoleRouteChildren = {
+  AuthenticatedConsoleIndexRoute: AuthenticatedConsoleIndexRoute,
+}
+
+const AuthenticatedConsoleRouteWithChildren =
+  AuthenticatedConsoleRoute._addFileChildren(AuthenticatedConsoleRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedConsoleRoute: typeof AuthenticatedConsoleRouteWithChildren
   AuthenticatedDeliveryRoute: typeof AuthenticatedDeliveryRoute
   AuthenticatedKitchenRoute: typeof AuthenticatedKitchenRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedConsoleRoute: AuthenticatedConsoleRouteWithChildren,
   AuthenticatedDeliveryRoute: AuthenticatedDeliveryRoute,
   AuthenticatedKitchenRoute: AuthenticatedKitchenRoute,
 }
