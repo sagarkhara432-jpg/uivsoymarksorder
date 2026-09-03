@@ -374,6 +374,53 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_flags: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          feature_key: string
+          id: string
+          is_enabled: boolean
+          label: string
+          restaurant_id: string | null
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          feature_key: string
+          id?: string
+          is_enabled?: boolean
+          label: string
+          restaurant_id?: string | null
+          scope?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          feature_key?: string
+          id?: string
+          is_enabled?: boolean
+          label?: string
+          restaurant_id?: string | null
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_flags_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       first_order_flags: {
         Row: {
           order_id: string | null
@@ -396,6 +443,41 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      impersonation_sessions: {
+        Row: {
+          admin_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          restaurant_id: string | null
+          started_at: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          restaurant_id?: string | null
+          started_at?: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          restaurant_id?: string | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_sessions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
