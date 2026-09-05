@@ -15,6 +15,7 @@ import MediaTab from "@/components/admin/MediaTab";
 import ImageUploadInput from "@/components/ImageUploadInput";
 import MediaImage from "@/components/MediaImage";
 import OrderOverride from "@/components/admin/OrderOverride";
+import StaffRolesTab from "@/components/admin/StaffRolesTab";
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type Tab = "orders" | "kitchens" | "riders" | "payments" | "media" | "menu" | "partners" | "offers" | "users" | "audit";
+type Tab = "orders" | "kitchens" | "riders" | "payments" | "media" | "menu" | "partners" | "offers" | "users" | "staff" | "audit";
 
 function AdminPage() {
   const nav = useNavigate();
@@ -91,6 +92,7 @@ function AdminPage() {
           <TabBtn active={tab==="partners"} onClick={() => setTab("partners")} icon={<Users className="h-4 w-4" />} label="Partners" />
           <TabBtn active={tab==="offers"} onClick={() => setTab("offers")} icon={<Tag className="h-4 w-4" />} label="Offers" />
           <TabBtn active={tab==="users"} onClick={() => setTab("users")} icon={<UserCheck className="h-4 w-4" />} label="Users" />
+          <TabBtn active={tab==="staff"} onClick={() => setTab("staff")} icon={<Users className="h-4 w-4" />} label="Staff & roles" />
           <TabBtn active={tab==="audit"} onClick={() => setTab("audit")} icon={<History className="h-4 w-4" />} label="Audit log" />
         </div>
       </header>
@@ -105,6 +107,7 @@ function AdminPage() {
         {tab === "partners" && <PartnersTab />}
         {tab === "offers" && <OffersTab />}
         {tab === "users" && <UsersTab />}
+        {tab === "staff" && <StaffRolesTab />}
         {tab === "audit" && <AuditTab focusId={focusLog} />}
       </main>
 
