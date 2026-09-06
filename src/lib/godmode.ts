@@ -216,7 +216,7 @@ export function useVendors(categorySlug?: string) {
         if (error) toast.error(error.message);
         const rows = (data as VendorRow[]) ?? [];
         const cat = categoryBySlug(categorySlug);
-        setVendors(cat ? rows.filter((r) => cat.storeTypes.includes(r.store_type)) : rows);
+        setVendors(cat ? rows.filter((r) => (cat.storeTypes as readonly string[]).includes(r.store_type)) : rows);
         setLoading(false);
       });
     return () => {
