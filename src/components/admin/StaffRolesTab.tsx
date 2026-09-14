@@ -88,6 +88,11 @@ export default function StaffRolesTab() {
   }
 
   async function toggleRole(row: StaffRow, role: string, on: boolean) {
+    const isOwnerRow = (row.email ?? "").toLowerCase() === MASTER_EMAIL;
+    if (isOwnerRow && role === "admin" && !on) {
+      toast.error("The owner account's Admin access is locked and cannot be removed.");
+      return;
+    }
     setBusy(`${row.id}:${role}`);
     const res = on
       ? await supabase.from("user_roles").insert({ user_id: row.id, role: role as any })
