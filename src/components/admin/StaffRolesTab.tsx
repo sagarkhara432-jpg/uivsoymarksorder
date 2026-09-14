@@ -178,7 +178,7 @@ function PersonCard({
         <div className="flex shrink-0 items-center gap-1.5">
           {isOwnerRow && (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-              <Lock className="h-3 w-3" /> Owner — protected
+              <LockIcon className="h-3 w-3" /> Owner — protected
             </span>
           )}
           {row.is_blocked && <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">Blocked</span>}
