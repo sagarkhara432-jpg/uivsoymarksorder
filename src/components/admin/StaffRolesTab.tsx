@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Search, ShieldCheck, UserCog, Save, Loader2 } from "lucide-react";
+import { Search, ShieldCheck, UserCog, Save, Loader2, Lock as LockIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const MASTER_EMAIL = "sagarkharal21@gmail.com";
@@ -88,6 +88,11 @@ export default function StaffRolesTab() {
   }
 
   async function toggleRole(row: StaffRow, role: string, on: boolean) {
+    const isOwnerRow = (row.email ?? "").toLowerCase() === MASTER_EMAIL;
+    if (isOwnerRow && role === "admin" && !on) {
+      toast.error("The owner account's Admin access is locked and cannot be removed.");
+      return;
+    }
     setBusy(`${row.id}:${role}`);
     const res = on
       ? await supabase.from("user_roles").insert({ user_id: row.id, role: role as any })
@@ -162,6 +167,7 @@ function PersonCard({
   busy: string | null;
   onToggle: (row: StaffRow, role: string, on: boolean) => void;
 }) {
+  const isOwnerRow = (row.email ?? "").toLowerCase() === MASTER_EMAIL;
   return (
     <div className="rounded-2xl border border-border/60 bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
@@ -169,17 +175,25 @@ function PersonCard({
           <p className="truncate text-sm font-bold">{row.full_name || row.email || row.id.slice(0, 8)}</p>
           <p className="truncate text-xs text-muted-foreground">{row.email}</p>
         </div>
-        {row.is_blocked && <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">Blocked</span>}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {isOwnerRow && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+              <LockIcon className="h-3 w-3" /> Owner — protected
+            </span>
+          )}
+          {row.is_blocked && <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">Blocked</span>}
+        </div>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {ASSIGNABLE.map((a) => {
           const on = row.roles.includes(a.key);
-          const locked = a.ownerOnly && !isOwner;
+          const ownerAdminLock = isOwnerRow && a.key === "admin";
+          const locked = (a.ownerOnly && !isOwner) || ownerAdminLock;
           const key = `${row.id}:${a.key}`;
           return (
             <button
               key={a.key}
-              title={locked ? "Owner account only" : a.hint}
+              title={ownerAdminLock ? "The owner account always keeps full Admin access" : locked ? "Owner account only" : a.hint}
               disabled={locked || busy === key}
               onClick={() => onToggle(row, a.key, !on)}
               className={`press inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold disabled:opacity-50 ${
