@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Search, ShieldCheck, UserCog, Save, Loader2 } from "lucide-react";
+import { Search, ShieldCheck, UserCog, Save, Loader2, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const MASTER_EMAIL = "sagarkharal21@gmail.com";
