@@ -16,6 +16,7 @@ import ImageUploadInput from "@/components/ImageUploadInput";
 import MediaImage from "@/components/MediaImage";
 import OrderOverride from "@/components/admin/OrderOverride";
 import StaffRolesTab from "@/components/admin/StaffRolesTab";
+import LandingTab from "@/components/admin/LandingTab";
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
