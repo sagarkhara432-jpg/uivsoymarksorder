@@ -19,10 +19,6 @@ export type AppSettings = {
   splash_bg_color: string;
   checkout_theme_color: string;
   qr_logo_url: string | null;
-  upi_id: string | null;
-  upi_holder_name: string | null;
-  upi_merchant_name: string | null;
-  upi_qr_url: string | null;
   payment_online_enabled: boolean;
   payment_cod_enabled: boolean;
   payment_card_enabled: boolean;
@@ -54,7 +50,6 @@ export type Restaurant = {
   id: string;
   name: string;
   description: string | null;
-  phone: string | null;
   address_line: string | null;
   city: string | null;
   pincode: string | null;
@@ -161,6 +156,49 @@ export function quote(subtotal: number, s: AppSettings | null) {
 /** Count a banner view or click for the admin ad-analytics panel. */
 export function bumpBanner(bannerId: string, kind: "view" | "click") {
   void supabase.rpc("bump_banner_metric", { _banner_id: bannerId, _kind: kind });
+}
+
+export type PaymentSettings = {
+  id: string;
+  upi_id: string | null;
+  upi_holder_name: string | null;
+  upi_merchant_name: string | null;
+  upi_qr_url: string | null;
+};
+
+/**
+ * Business payment credentials. Kept in a protected table — only signed-in
+ * users can read it and only admins can change it.
+ */
+export function usePaymentSettings() {
+  const [payment, setPayment] = useState<PaymentSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      supabase
+        .from("payment_settings")
+        .select("*")
+        .eq("id", "global")
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!alive) return;
+          setPayment((data as PaymentSettings) ?? null);
+          setLoading(false);
+        });
+    load();
+    const ch = supabase
+      .channel(`payment-settings-${uid()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_settings" }, () => load())
+      .subscribe();
+    return () => {
+      alive = false;
+      supabase.removeChannel(ch);
+    };
+  }, []);
+
+  return { payment, loading };
 }
 
 /** Commission split preview used by the kitchen earnings dashboard. */
