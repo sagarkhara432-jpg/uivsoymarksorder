@@ -125,10 +125,6 @@ export type Database = {
           splash_url: string | null
           tax_percent: number
           updated_at: string
-          upi_holder_name: string | null
-          upi_id: string | null
-          upi_merchant_name: string | null
-          upi_qr_url: string | null
         }
         Insert: {
           accent_color?: string
@@ -156,10 +152,6 @@ export type Database = {
           splash_url?: string | null
           tax_percent?: number
           updated_at?: string
-          upi_holder_name?: string | null
-          upi_id?: string | null
-          upi_merchant_name?: string | null
-          upi_qr_url?: string | null
         }
         Update: {
           accent_color?: string
@@ -187,10 +179,6 @@ export type Database = {
           splash_url?: string | null
           tax_percent?: number
           updated_at?: string
-          upi_holder_name?: string | null
-          upi_id?: string | null
-          upi_merchant_name?: string | null
-          upi_qr_url?: string | null
         }
         Relationships: []
       }
@@ -298,13 +286,6 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "banners_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants_public"
             referencedColumns: ["id"]
           },
         ]
@@ -426,13 +407,6 @@ export type Database = {
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "feature_flags_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       first_order_flags: {
@@ -492,13 +466,6 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "impersonation_sessions_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants_public"
             referencedColumns: ["id"]
           },
         ]
@@ -594,13 +561,6 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "menu_items_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants_public"
             referencedColumns: ["id"]
           },
         ]
@@ -931,13 +891,6 @@ export type Database = {
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "orders_restaurant_id_fkey"
-            columns: ["restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       partner_status: {
@@ -1012,6 +965,33 @@ export type Database = {
           upi_id?: string | null
           user_id?: string
           vehicle_number?: string | null
+        }
+        Relationships: []
+      }
+      payment_settings: {
+        Row: {
+          id: string
+          updated_at: string
+          upi_holder_name: string | null
+          upi_id: string | null
+          upi_merchant_name: string | null
+          upi_qr_url: string | null
+        }
+        Insert: {
+          id: string
+          updated_at?: string
+          upi_holder_name?: string | null
+          upi_id?: string | null
+          upi_merchant_name?: string | null
+          upi_qr_url?: string | null
+        }
+        Update: {
+          id?: string
+          updated_at?: string
+          upi_holder_name?: string | null
+          upi_id?: string | null
+          upi_merchant_name?: string | null
+          upi_qr_url?: string | null
         }
         Relationships: []
       }
@@ -1099,6 +1079,35 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurant_private: {
+        Row: {
+          phone: string | null
+          restaurant_id: string
+          updated_at: string
+          upi_id: string | null
+        }
+        Insert: {
+          phone?: string | null
+          restaurant_id: string
+          updated_at?: string
+          upi_id?: string | null
+        }
+        Update: {
+          phone?: string | null
+          restaurant_id?: string
+          updated_at?: string
+          upi_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_private_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           address_line: string | null
@@ -1116,12 +1125,10 @@ export type Database = {
           logo_url: string | null
           name: string
           owner_id: string | null
-          phone: string | null
           pincode: string | null
           status: string
           store_type: string
           updated_at: string
-          upi_id: string | null
         }
         Insert: {
           address_line?: string | null
@@ -1139,12 +1146,10 @@ export type Database = {
           logo_url?: string | null
           name: string
           owner_id?: string | null
-          phone?: string | null
           pincode?: string | null
           status?: string
           store_type?: string
           updated_at?: string
-          upi_id?: string | null
         }
         Update: {
           address_line?: string | null
@@ -1162,12 +1167,10 @@ export type Database = {
           logo_url?: string | null
           name?: string
           owner_id?: string | null
-          phone?: string | null
           pincode?: string | null
           status?: string
           store_type?: string
           updated_at?: string
-          upi_id?: string | null
         }
         Relationships: []
       }
@@ -1226,129 +1229,7 @@ export type Database = {
       }
     }
     Views: {
-      app_settings_public: {
-        Row: {
-          accent_color: string | null
-          app_name: string | null
-          base_delivery_fee: number | null
-          checkout_theme_color: string | null
-          delivery_radius_km: number | null
-          download_url: string | null
-          free_delivery_over: number | null
-          id: string | null
-          logo_url: string | null
-          payment_card_enabled: boolean | null
-          payment_cod_enabled: boolean | null
-          payment_online_enabled: boolean | null
-          primary_color: string | null
-          qr_logo_url: string | null
-          service_enabled: boolean | null
-          service_message: string | null
-          splash_bg_color: string | null
-          splash_url: string | null
-          tax_percent: number | null
-        }
-        Insert: {
-          accent_color?: string | null
-          app_name?: string | null
-          base_delivery_fee?: number | null
-          checkout_theme_color?: string | null
-          delivery_radius_km?: number | null
-          download_url?: string | null
-          free_delivery_over?: number | null
-          id?: string | null
-          logo_url?: string | null
-          payment_card_enabled?: boolean | null
-          payment_cod_enabled?: boolean | null
-          payment_online_enabled?: boolean | null
-          primary_color?: string | null
-          qr_logo_url?: string | null
-          service_enabled?: boolean | null
-          service_message?: string | null
-          splash_bg_color?: string | null
-          splash_url?: string | null
-          tax_percent?: number | null
-        }
-        Update: {
-          accent_color?: string | null
-          app_name?: string | null
-          base_delivery_fee?: number | null
-          checkout_theme_color?: string | null
-          delivery_radius_km?: number | null
-          download_url?: string | null
-          free_delivery_over?: number | null
-          id?: string | null
-          logo_url?: string | null
-          payment_card_enabled?: boolean | null
-          payment_cod_enabled?: boolean | null
-          payment_online_enabled?: boolean | null
-          primary_color?: string | null
-          qr_logo_url?: string | null
-          service_enabled?: boolean | null
-          service_message?: string | null
-          splash_bg_color?: string | null
-          splash_url?: string | null
-          tax_percent?: number | null
-        }
-        Relationships: []
-      }
-      restaurants_public: {
-        Row: {
-          address_line: string | null
-          city: string | null
-          cover_url: string | null
-          created_at: string | null
-          description: string | null
-          id: string | null
-          is_open: boolean | null
-          is_sponsored: boolean | null
-          landmark: string | null
-          lat: number | null
-          lng: number | null
-          logo_url: string | null
-          name: string | null
-          pincode: string | null
-          status: string | null
-          store_type: string | null
-        }
-        Insert: {
-          address_line?: string | null
-          city?: string | null
-          cover_url?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          is_open?: boolean | null
-          is_sponsored?: boolean | null
-          landmark?: string | null
-          lat?: number | null
-          lng?: number | null
-          logo_url?: string | null
-          name?: string | null
-          pincode?: string | null
-          status?: string | null
-          store_type?: string | null
-        }
-        Update: {
-          address_line?: string | null
-          city?: string | null
-          cover_url?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          is_open?: boolean | null
-          is_sponsored?: boolean | null
-          landmark?: string | null
-          lat?: number | null
-          lng?: number | null
-          logo_url?: string | null
-          name?: string | null
-          pincode?: string | null
-          status?: string | null
-          store_type?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       bump_banner_metric: {
