@@ -22,7 +22,7 @@ import { completeDelivery, verifyPickup } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
 import LeafletMap from "@/components/LeafletMap";
-import { useRestaurants, useAppSettings } from "@/lib/settings";
+import { useRestaurants, useAppSettings, usePaymentSettings } from "@/lib/settings";
 import { upiDeepLink, isValidUpiId } from "@/lib/upi";
 
 import QrCode from "@/components/QrCode";
@@ -485,11 +485,12 @@ function CodCollect({
   onMethod: (m: "cash" | "upi_qr") => void;
 }) {
   const { settings } = useAppSettings();
-  const upiId = settings?.upi_id?.trim() ?? "";
+  const { payment } = usePaymentSettings();
+  const upiId = payment?.upi_id?.trim() ?? "";
   const qrValue = isValidUpiId(upiId)
     ? upiDeepLink("upi://pay", {
         pa: upiId,
-        pn: settings?.upi_merchant_name || settings?.app_name || "Uivsoymarks",
+        pn: payment?.upi_merchant_name || settings?.app_name || "Uivsoymarks",
         am: amount,
         tr: orderId,
         tn: `Order ${orderId.slice(0, 6)}`,

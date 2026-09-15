@@ -24,13 +24,13 @@ export default function PaymentSheet({ open, total, settings, payment, busy, onC
   const [ref] = useState(newPaymentRef);
   if (!open) return null;
 
-  const upiId = settings?.upi_id?.trim() || "";
+  const upiId = payment?.upi_id?.trim() || "";
   const note = `${settings?.app_name ?? "Uivsoymarks"} order`;
   /** Direct UPI intent — opens GPay / PhonePe / Paytm with no gateway involved. */
   const link = (scheme: UpiScheme) =>
     upiDeepLink(scheme, {
       pa: upiId,
-      pn: settings?.upi_merchant_name || settings?.upi_holder_name || settings?.app_name || "Uivsoymarks",
+      pn: payment?.upi_merchant_name || payment?.upi_holder_name || settings?.app_name || "Uivsoymarks",
       am: total,
       tr: ref,
       tn: note,
@@ -112,9 +112,9 @@ export default function PaymentSheet({ open, total, settings, payment, busy, onC
         {screen === "upi" && (
           <div className="mt-4">
             <div className="rounded-2xl border border-border/60 bg-surface p-4 text-center">
-              {settings?.upi_qr_url ? (
+              {payment?.upi_qr_url ? (
                 <MediaImage
-                  src={settings.upi_qr_url}
+                  src={payment.upi_qr_url}
                   alt="Scan to pay"
                   className="mx-auto h-56 w-56 rounded-2xl border border-border bg-background object-contain p-2"
                 />
@@ -122,8 +122,8 @@ export default function PaymentSheet({ open, total, settings, payment, busy, onC
                 <QrCode value={payUrl} size={224} showDownloads={false} fileName="uivsoymarks-upi" />
               )}
               <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Paying to</p>
-              <p className="text-sm font-extrabold">{settings?.upi_merchant_name || settings?.app_name}</p>
-              {settings?.upi_holder_name && <p className="text-xs text-muted-foreground">{settings.upi_holder_name}</p>}
+              <p className="text-sm font-extrabold">{payment?.upi_merchant_name || settings?.app_name}</p>
+              {payment?.upi_holder_name && <p className="text-xs text-muted-foreground">{payment.upi_holder_name}</p>}
               <button onClick={copy} className="press mx-auto mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold">
                 {copied ? <Check className="h-3.5 w-3.5 text-fresh" /> : <Copy className="h-3.5 w-3.5" />} {upiId || "UPI not set"}
               </button>
