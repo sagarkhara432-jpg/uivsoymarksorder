@@ -73,6 +73,15 @@ function DeliveryPage() {
     () => restaurants.find((r) => r.id === order?.restaurant_id) ?? restaurants[0] ?? null,
     [restaurants, order?.restaurant_id],
   );
+  const [pickupPhone, setPickupPhone] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pickup?.id) { setPickupPhone(null); return; }
+    let alive = true;
+    supabase.from("restaurant_private").select("phone").eq("restaurant_id", pickup.id).maybeSingle()
+      .then(({ data }) => { if (alive) setPickupPhone(data?.phone ?? null); });
+    return () => { alive = false; };
+  }, [pickup?.id]);
 
   useEffect(() => {
     (async () => {
@@ -262,8 +271,8 @@ function DeliveryPage() {
                         <Navigation className="h-3.5 w-3.5" /> Navigate to store
                       </a>
                     )}
-                    {pickup?.phone && (
-                      <a href={`tel:${pickup.phone}`} className="press inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold active:bg-accent">
+                    {pickupPhone && (
+                      <a href={`tel:${pickupPhone}`} className="press inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold active:bg-accent">
                         <Phone className="h-3.5 w-3.5" /> Call store
                       </a>
                     )}
