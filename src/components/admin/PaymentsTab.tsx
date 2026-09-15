@@ -4,11 +4,12 @@ import { Printer, QrCode as QrIcon, Save, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import QrCode from "@/components/QrCode";
 import ImageUploadInput from "@/components/ImageUploadInput";
-import { useAppSettings } from "@/lib/settings";
+import { useAppSettings, usePaymentSettings } from "@/lib/settings";
 
 /** Owner payment credentials, UPI intent preview and printable app-download poster. */
 export default function PaymentsTab() {
   const { settings } = useAppSettings();
+  const { payment } = usePaymentSettings();
   const [f, setF] = useState({
     upi_id: "", upi_holder_name: "", upi_merchant_name: "", upi_qr_url: "" as string | null,
     download_url: "", qr_logo_url: "" as string | null,
@@ -20,25 +21,28 @@ export default function PaymentsTab() {
   useEffect(() => {
     if (!settings) return;
     setF({
-      upi_id: settings.upi_id ?? "",
-      upi_holder_name: settings.upi_holder_name ?? "",
-      upi_merchant_name: settings.upi_merchant_name ?? "",
-      upi_qr_url: settings.upi_qr_url ?? null,
+      upi_id: payment?.upi_id ?? "",
+      upi_holder_name: payment?.upi_holder_name ?? "",
+      upi_merchant_name: payment?.upi_merchant_name ?? "",
+      upi_qr_url: payment?.upi_qr_url ?? null,
       download_url: settings.download_url ?? "",
       qr_logo_url: settings.qr_logo_url ?? null,
       payment_online_enabled: settings.payment_online_enabled,
       payment_cod_enabled: settings.payment_cod_enabled,
       payment_card_enabled: settings.payment_card_enabled,
     });
-  }, [settings?.id, settings?.upi_id, settings?.download_url]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settings?.id, settings?.download_url, payment?.id, payment?.upi_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function save() {
     setBusy(true);
-    const { error } = await supabase.from("app_settings").update({
+    const { error: pErr } = await supabase.from("payment_settings").upsert({
+      id: "global",
       upi_id: f.upi_id.trim() || null,
       upi_holder_name: f.upi_holder_name.trim() || null,
       upi_merchant_name: f.upi_merchant_name.trim() || null,
       upi_qr_url: f.upi_qr_url,
+    }, { onConflict: "id" });
+    const { error } = await supabase.from("app_settings").update({
       download_url: f.download_url.trim() || null,
       qr_logo_url: f.qr_logo_url,
       payment_online_enabled: f.payment_online_enabled,
@@ -46,7 +50,7 @@ export default function PaymentsTab() {
       payment_card_enabled: f.payment_card_enabled,
     }).eq("id", "global");
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error || pErr) return toast.error((error ?? pErr)!.message);
     toast.success("Payment settings saved");
   }
 
