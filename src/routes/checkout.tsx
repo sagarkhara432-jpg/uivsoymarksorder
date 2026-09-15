@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCart, cart, cartTotals } from "@/lib/cart";
 import { placeOrder } from "@/lib/orders.functions";
 import { useSession } from "@/lib/auth";
-import { useAppSettings, quote } from "@/lib/settings";
+import { useAppSettings, usePaymentSettings, quote } from "@/lib/settings";
 import LocationPicker from "@/components/LocationPicker";
 import PaymentSheet, { type PaymentMethod } from "@/components/PaymentSheet";
 

@@ -6,7 +6,7 @@ import LocationPicker from "@/components/LocationPicker";
 
 type Kitchen = {
   id: string; name: string; address_line: string | null; landmark: string | null;
-  city: string | null; pincode: string | null; lat: number | null; lng: number | null; phone: string | null;
+  city: string | null; pincode: string | null; lat: number | null; lng: number | null;
 };
 
 /** Kitchen-side address + GPS capture. Riders navigate to exactly this pin. */
@@ -17,18 +17,23 @@ export default function KitchenLocationCard() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    supabase.from("restaurants").select("id, name, address_line, landmark, city, pincode, lat, lng, phone").order("created_at").then(({ data }) => {
+    supabase.from("restaurants").select("id, name, address_line, landmark, city, pincode, lat, lng").order("created_at").then(({ data }) => {
       const list = (data ?? []) as Kitchen[];
       setRows(list);
       if (list[0]) select(list[0]);
     });
   }, []);
 
-  function select(k: Kitchen) {
+  async function select(k: Kitchen) {
     setId(k.id);
+    const { data: priv } = await supabase
+      .from("restaurant_private")
+      .select("phone")
+      .eq("restaurant_id", k.id)
+      .maybeSingle();
     setF({
       address_line: k.address_line ?? "", landmark: k.landmark ?? "", city: k.city ?? "",
-      pincode: k.pincode ?? "", phone: k.phone ?? "", lat: k.lat, lng: k.lng,
+      pincode: k.pincode ?? "", phone: priv?.phone ?? "", lat: k.lat, lng: k.lng,
     });
   }
 
@@ -37,10 +42,13 @@ export default function KitchenLocationCard() {
     setBusy(true);
     const { error } = await supabase.from("restaurants").update({
       address_line: f.address_line || null, landmark: f.landmark || null, city: f.city || null,
-      pincode: f.pincode || null, phone: f.phone || null, lat: f.lat, lng: f.lng,
+      pincode: f.pincode || null, lat: f.lat, lng: f.lng,
     }).eq("id", id);
+    const { error: pErr } = await supabase
+      .from("restaurant_private")
+      .upsert({ restaurant_id: id, phone: f.phone || null }, { onConflict: "restaurant_id" });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error || pErr) return toast.error((error ?? pErr)!.message);
     toast.success("Kitchen location saved — riders will navigate here");
   }
 
@@ -58,7 +66,7 @@ export default function KitchenLocationCard() {
           <input value={f.landmark} onChange={(e) => setF({ ...f, landmark: e.target.value })} placeholder="Landmark" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
           <input value={f.pincode} onChange={(e) => setF({ ...f, pincode: e.target.value })} placeholder="Pin code" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
           <input value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} placeholder="City" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
-          <input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="Kitchen phone" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
+          <input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="Kitchen phone (private)" className="rounded-xl border border-border bg-surface px-3 py-2 text-sm" />
         </div>
         <p className="mt-3 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground"><MapPin className="h-3.5 w-3.5" /> Detect current location / pick on map</p>
         <div className="mt-1">
