@@ -1,8 +1,10 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
-import { ShoppingBag, ChefHat, Bike, ShieldCheck, Sparkles } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { useSession, useMyRoles, useMyProfile } from "@/lib/auth";
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 import PromoStrip from "@/components/PromoStrip";
+import LandingFeatureIcon from "@/components/LandingFeatureIcon";
+import { useLandingContent, type LandingFeature } from "@/lib/landing";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,6 +22,7 @@ function Landing() {
   const { user, loading } = useSession();
   const { roles, loading: rolesLoading } = useMyRoles(user);
   const { profile, loading: profileLoading } = useMyProfile(user);
+  const { content } = useLandingContent();
 
   if (!loading && user && !rolesLoading && !profileLoading) {
     if (roles.includes("admin")) return <Navigate to="/admin" />;
@@ -53,30 +56,49 @@ function Landing() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,oklch(0.62_0.22_24/0.15),transparent_70%)]" />
         <div className="mx-auto max-w-6xl px-4 pb-8 pt-10 text-center sm:pt-16">
-          <div className="mx-auto mb-4 inline-flex items-center gap-1.5 rounded-full bg-offer px-3 py-1 text-xs font-semibold text-offer-foreground">
-            <Sparkles className="h-3.5 w-3.5" /> Get 50% off your first order
-          </div>
+          {content.badge_enabled && content.badge_text && (
+            <div
+              className="mx-auto mb-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+              style={{ background: content.badge_bg, color: content.badge_fg }}
+            >
+              <LandingFeatureIcon name="Sparkles" className="h-3.5 w-3.5" /> {content.badge_text}
+            </div>
+          )}
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
-            Hot food, <span className="text-primary">delivered fast.</span>
+            {content.headline} <span className="text-primary">{content.headline_highlight}</span>
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Browse hand-picked menus, tap once, and watch your order fly across town in real time.
-          </p>
+          {content.subheadline && (
+            <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground sm:text-lg">{content.subheadline}</p>
+          )}
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link to="/menu" className="press rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-pop)] active:bg-primary-press">
-              <ShoppingBag className="mr-1.5 inline h-4 w-4" /> Order food
-            </Link>
-            <Link to="/partner" className="press rounded-full border border-border bg-surface px-6 py-3 text-sm font-semibold active:bg-accent">
-              Partner with us
-            </Link>
+            {content.primary_label && (
+              <CtaLink
+                href={content.primary_href}
+                className="press rounded-full px-6 py-3 text-sm font-semibold shadow-[var(--shadow-pop)]"
+                style={{ background: content.primary_bg, color: content.primary_fg }}
+              >
+                <ShoppingBag className="mr-1.5 inline h-4 w-4" /> {content.primary_label}
+              </CtaLink>
+            )}
+            {content.secondary_label && (
+              <CtaLink
+                href={content.secondary_href}
+                className="press rounded-full border border-border px-6 py-3 text-sm font-semibold"
+                style={{ background: content.secondary_bg, color: content.secondary_fg }}
+              >
+                {content.secondary_label}
+              </CtaLink>
+            )}
           </div>
         </div>
 
-        <div className="mx-auto grid max-w-6xl gap-4 px-4 pb-16 sm:grid-cols-3">
-          <FeatureCard icon={<ChefHat className="h-5 w-5" />} title="Live kitchens" text="Real-time order feed with prep-time tracking." tone="orange" />
-          <FeatureCard icon={<Bike className="h-5 w-5" />} title="Fastest riders" text="Auto-assigned to your nearest verified partner." tone="fresh" />
-          <FeatureCard icon={<ShieldCheck className="h-5 w-5" />} title="Secure & private" text="Masked calls, verified partners, protected data." tone="offer" />
-        </div>
+        {content.features.length > 0 && (
+          <div className="mx-auto grid max-w-6xl gap-4 px-4 pb-16 sm:grid-cols-3">
+            {content.features.map((f, i) => (
+              <FeatureCard key={`${f.title}-${i}`} feature={f} />
+            ))}
+          </div>
+        )}
       </section>
 
       <PromoStrip />
@@ -85,19 +107,45 @@ function Landing() {
   );
 }
 
-function FeatureCard({
-  icon, title, text, tone,
-}: { icon: React.ReactNode; title: string; text: string; tone: "orange" | "fresh" | "offer" }) {
-  const toneMap = {
+/**
+ * Renders an admin-configured destination: in-app paths go through the router,
+ * external links open in a new tab.
+ */
+function CtaLink({
+  href,
+  className,
+  style,
+  children,
+}: { href: string; className?: string; style?: React.CSSProperties; children: React.ReactNode }) {
+  const target = href?.trim() || "/";
+  if (/^https?:\/\//i.test(target)) {
+    return (
+      <a href={target} target="_blank" rel="noreferrer" className={className} style={style}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link to={target} className={className} style={style}>
+      {children}
+    </Link>
+  );
+}
+
+function FeatureCard({ feature }: { feature: LandingFeature }) {
+  const toneMap: Record<string, string> = {
     orange: "bg-orange text-orange-foreground",
     fresh: "bg-fresh text-fresh-foreground",
     offer: "bg-offer text-offer-foreground",
+    primary: "bg-primary text-primary-foreground",
   };
   return (
     <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-[var(--shadow-card)]">
-      <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${toneMap[tone]}`}>{icon}</div>
-      <h3 className="mt-3 text-base font-semibold">{title}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+      <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${toneMap[feature.tone ?? "orange"] ?? toneMap.orange}`}>
+        <LandingFeatureIcon name={feature.icon} />
+      </div>
+      <h3 className="mt-3 text-base font-semibold">{feature.title}</h3>
+      <p className="mt-1 text-sm text-muted-foreground">{feature.text}</p>
     </div>
   );
 }

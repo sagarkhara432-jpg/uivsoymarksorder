@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Store, Bike, Wallet, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X, Film } from "lucide-react";
+import { Shield, Store, Bike, Wallet, Menu as MenuIcon, Users, ClipboardList, Plus, Trash2, LogOut, Tag, UserX, UserCheck, History, Pencil, Save, X, Film, LayoutTemplate } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { decideVerification } from "@/lib/admin.functions";
 import { AlertsBell } from "@/components/AdminAlerts";
@@ -16,6 +16,7 @@ import ImageUploadInput from "@/components/ImageUploadInput";
 import MediaImage from "@/components/MediaImage";
 import OrderOverride from "@/components/admin/OrderOverride";
 import StaffRolesTab from "@/components/admin/StaffRolesTab";
+import LandingTab from "@/components/admin/LandingTab";
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type Tab = "orders" | "kitchens" | "riders" | "payments" | "media" | "menu" | "partners" | "offers" | "users" | "staff" | "audit";
+type Tab = "orders" | "kitchens" | "riders" | "payments" | "media" | "landing" | "menu" | "partners" | "offers" | "users" | "staff" | "audit";
 
 function AdminPage() {
   const nav = useNavigate();
@@ -88,6 +89,7 @@ function AdminPage() {
           <TabBtn active={tab==="riders"} onClick={() => setTab("riders")} icon={<Bike className="h-4 w-4" />} label="Riders" />
           <TabBtn active={tab==="payments"} onClick={() => setTab("payments")} icon={<Wallet className="h-4 w-4" />} label="Payments & QR" />
           <TabBtn active={tab==="media"} onClick={() => setTab("media")} icon={<Film className="h-4 w-4" />} label="Banners & video" />
+          <TabBtn active={tab==="landing"} onClick={() => setTab("landing")} icon={<LayoutTemplate className="h-4 w-4" />} label="Landing page" />
           <TabBtn active={tab==="menu"} onClick={() => setTab("menu")} icon={<MenuIcon className="h-4 w-4" />} label="Menu" />
           <TabBtn active={tab==="partners"} onClick={() => setTab("partners")} icon={<Users className="h-4 w-4" />} label="Partners" />
           <TabBtn active={tab==="offers"} onClick={() => setTab("offers")} icon={<Tag className="h-4 w-4" />} label="Offers" />
@@ -103,6 +105,7 @@ function AdminPage() {
         {tab === "riders" && <><RiderRatesCard /><RidersTab /></>}
         {tab === "payments" && <PaymentsTab />}
         {tab === "media" && <MediaTab />}
+        {tab === "landing" && <LandingTab />}
         {tab === "menu" && <MenuTab />}
         {tab === "partners" && <PartnersTab />}
         {tab === "offers" && <OffersTab />}
