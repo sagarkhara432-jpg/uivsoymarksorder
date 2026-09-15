@@ -470,6 +470,72 @@ export type Database = {
           },
         ]
       }
+      landing_content: {
+        Row: {
+          badge_bg: string
+          badge_enabled: boolean
+          badge_fg: string
+          badge_text: string
+          created_at: string
+          features: Json
+          headline: string
+          headline_highlight: string
+          id: string
+          primary_bg: string
+          primary_fg: string
+          primary_href: string
+          primary_label: string
+          secondary_bg: string
+          secondary_fg: string
+          secondary_href: string
+          secondary_label: string
+          subheadline: string
+          updated_at: string
+        }
+        Insert: {
+          badge_bg?: string
+          badge_enabled?: boolean
+          badge_fg?: string
+          badge_text?: string
+          created_at?: string
+          features?: Json
+          headline?: string
+          headline_highlight?: string
+          id?: string
+          primary_bg?: string
+          primary_fg?: string
+          primary_href?: string
+          primary_label?: string
+          secondary_bg?: string
+          secondary_fg?: string
+          secondary_href?: string
+          secondary_label?: string
+          subheadline?: string
+          updated_at?: string
+        }
+        Update: {
+          badge_bg?: string
+          badge_enabled?: boolean
+          badge_fg?: string
+          badge_text?: string
+          created_at?: string
+          features?: Json
+          headline?: string
+          headline_highlight?: string
+          id?: string
+          primary_bg?: string
+          primary_fg?: string
+          primary_href?: string
+          primary_label?: string
+          secondary_bg?: string
+          secondary_fg?: string
+          secondary_href?: string
+          secondary_label?: string
+          subheadline?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       menu_item_notes: {
         Row: {
           created_at: string
