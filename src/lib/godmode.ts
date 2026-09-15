@@ -207,14 +207,22 @@ export function useVendors(categorySlug?: string) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    supabase
-      .from("restaurants")
-      .select("id, name, store_type, status, is_open, city, phone, commission_percent, upi_id")
-      .order("name")
-      .then(({ data, error }) => {
+    Promise.all([
+      supabase
+        .from("restaurants")
+        .select("id, name, store_type, status, is_open, city, commission_percent")
+        .order("name"),
+      supabase.from("restaurant_private").select("restaurant_id, phone, upi_id"),
+    ])
+      .then(([{ data, error }, { data: priv }]) => {
         if (cancelled) return;
         if (error) toast.error(error.message);
-        const rows = (data as VendorRow[]) ?? [];
+        const privBy = new Map((priv ?? []).map((p) => [p.restaurant_id, p]));
+        const rows = ((data ?? []) as Omit<VendorRow, "phone" | "upi_id">[]).map((r) => ({
+          ...r,
+          phone: privBy.get(r.id)?.phone ?? null,
+          upi_id: privBy.get(r.id)?.upi_id ?? null,
+        })) as VendorRow[];
         const cat = categoryBySlug(categorySlug);
         setVendors(cat ? rows.filter((r) => (cat.storeTypes as readonly string[]).includes(r.store_type)) : rows);
         setLoading(false);
