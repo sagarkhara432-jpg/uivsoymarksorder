@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import LocationPicker from "@/components/LocationPicker";
 
 type Kitchen = {
-  id: string; name: string; description: string | null; phone: string | null;
+  id: string; name: string; description: string | null;
   address_line: string | null; landmark: string | null; city: string | null; pincode: string | null;
   lat: number | null; lng: number | null; is_open: boolean; status: string;
   commission_percent: number | null;
@@ -16,19 +16,22 @@ const STATUSES = ["active", "inactive", "suspended"] as const;
 /** Owner-side kitchen control: status, commission, location and live order load. */
 export default function KitchensTab() {
   const [rows, setRows] = useState<Kitchen[]>([]);
+  const [phones, setPhones] = useState<Record<string, string>>({});
   const [orders, setOrders] = useState<{ id: string; restaurant_id: string | null; status: string; total: number; customer_name: string | null }[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState("");
 
   async function load() {
-    const [{ data: k, error }, { data: o }] = await Promise.all([
+    const [{ data: k, error }, { data: o }, { data: priv }] = await Promise.all([
       supabase.from("restaurants").select("*").order("created_at"),
       supabase.from("orders").select("id, restaurant_id, status, total, customer_name")
         .not("status", "in", "(delivered,cancelled)").order("placed_at", { ascending: false }),
+      supabase.from("restaurant_private").select("restaurant_id, phone"),
     ]);
     if (error) toast.error(error.message);
     setRows((k ?? []) as Kitchen[]);
     setOrders((o ?? []) as any[]);
+    setPhones(Object.fromEntries((priv ?? []).map((p) => [p.restaurant_id, p.phone ?? ""])));
   }
 
   useEffect(() => {
@@ -117,7 +120,7 @@ export default function KitchensTab() {
               </div>
             </div>
 
-            {editId === k.id && <KitchenEditor kitchen={k} onSaved={() => { setEditId(null); load(); }} onCancel={() => setEditId(null)} />}
+            {editId === k.id && <KitchenEditor kitchen={k} phone={phones[k.id] ?? ""} onSaved={() => { setEditId(null); load(); }} onCancel={() => setEditId(null)} />}
 
             {live.length > 0 && (
               <ul className="mt-3 divide-y divide-border/60 rounded-xl border border-border/60 bg-surface px-3">
@@ -136,9 +139,9 @@ export default function KitchensTab() {
   );
 }
 
-function KitchenEditor({ kitchen, onSaved, onCancel }: { kitchen: Kitchen; onSaved: () => void; onCancel: () => void }) {
+function KitchenEditor({ kitchen, phone, onSaved, onCancel }: { kitchen: Kitchen; phone: string; onSaved: () => void; onCancel: () => void }) {
   const [f, setF] = useState({
-    name: kitchen.name ?? "", phone: kitchen.phone ?? "", description: kitchen.description ?? "",
+    name: kitchen.name ?? "", phone, description: kitchen.description ?? "",
     address_line: kitchen.address_line ?? "", landmark: kitchen.landmark ?? "", city: kitchen.city ?? "",
     pincode: kitchen.pincode ?? "", commission_percent: kitchen.commission_percent == null ? "" : String(kitchen.commission_percent),
     lat: kitchen.lat, lng: kitchen.lng,
@@ -147,7 +150,6 @@ function KitchenEditor({ kitchen, onSaved, onCancel }: { kitchen: Kitchen; onSav
   async function save() {
     const { error } = await supabase.from("restaurants").update({
       name: f.name.trim() || kitchen.name,
-      phone: f.phone || null,
       description: f.description || null,
       address_line: f.address_line || null,
       landmark: f.landmark || null,
@@ -157,7 +159,10 @@ function KitchenEditor({ kitchen, onSaved, onCancel }: { kitchen: Kitchen; onSav
       lat: f.lat,
       lng: f.lng,
     }).eq("id", kitchen.id);
-    if (error) return toast.error(error.message);
+    const { error: pErr } = await supabase
+      .from("restaurant_private")
+      .upsert({ restaurant_id: kitchen.id, phone: f.phone || null }, { onConflict: "restaurant_id" });
+    if (error || pErr) return toast.error((error ?? pErr)!.message);
     toast.success("Kitchen saved");
     onSaved();
   }
@@ -165,7 +170,7 @@ function KitchenEditor({ kitchen, onSaved, onCancel }: { kitchen: Kitchen; onSav
   return (
     <div className="mt-3 grid gap-2 rounded-2xl border border-primary/40 bg-surface p-3 sm:grid-cols-2">
       <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Kitchen name" className="rounded-xl border border-border bg-card px-3 py-2 text-sm" />
-      <input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="Phone" className="rounded-xl border border-border bg-card px-3 py-2 text-sm" />
+      <input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="Phone (private)" className="rounded-xl border border-border bg-card px-3 py-2 text-sm" />
       <input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Description / layout notes" className="rounded-xl border border-border bg-card px-3 py-2 text-sm sm:col-span-2" />
       <input value={f.address_line} onChange={(e) => setF({ ...f, address_line: e.target.value })} placeholder="Full address" className="rounded-xl border border-border bg-card px-3 py-2 text-sm sm:col-span-2" />
       <input value={f.landmark} onChange={(e) => setF({ ...f, landmark: e.target.value })} placeholder="Landmark" className="rounded-xl border border-border bg-card px-3 py-2 text-sm" />

@@ -22,7 +22,7 @@ import { completeDelivery, verifyPickup } from "@/lib/orders.functions";
 import SwipeToConfirm from "@/components/SwipeToConfirm";
 import { useOrderAlarm } from "@/hooks/use-order-alarm";
 import LeafletMap from "@/components/LeafletMap";
-import { useRestaurants, useAppSettings } from "@/lib/settings";
+import { useRestaurants, useAppSettings, usePaymentSettings } from "@/lib/settings";
 import { upiDeepLink, isValidUpiId } from "@/lib/upi";
 
 import QrCode from "@/components/QrCode";
@@ -73,6 +73,15 @@ function DeliveryPage() {
     () => restaurants.find((r) => r.id === order?.restaurant_id) ?? restaurants[0] ?? null,
     [restaurants, order?.restaurant_id],
   );
+  const [pickupPhone, setPickupPhone] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pickup?.id) { setPickupPhone(null); return; }
+    let alive = true;
+    supabase.from("restaurant_private").select("phone").eq("restaurant_id", pickup.id).maybeSingle()
+      .then(({ data }) => { if (alive) setPickupPhone(data?.phone ?? null); });
+    return () => { alive = false; };
+  }, [pickup?.id]);
 
   useEffect(() => {
     (async () => {
@@ -262,8 +271,8 @@ function DeliveryPage() {
                         <Navigation className="h-3.5 w-3.5" /> Navigate to store
                       </a>
                     )}
-                    {pickup?.phone && (
-                      <a href={`tel:${pickup.phone}`} className="press inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold active:bg-accent">
+                    {pickupPhone && (
+                      <a href={`tel:${pickupPhone}`} className="press inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold active:bg-accent">
                         <Phone className="h-3.5 w-3.5" /> Call store
                       </a>
                     )}
@@ -485,11 +494,12 @@ function CodCollect({
   onMethod: (m: "cash" | "upi_qr") => void;
 }) {
   const { settings } = useAppSettings();
-  const upiId = settings?.upi_id?.trim() ?? "";
+  const { payment } = usePaymentSettings();
+  const upiId = payment?.upi_id?.trim() ?? "";
   const qrValue = isValidUpiId(upiId)
     ? upiDeepLink("upi://pay", {
         pa: upiId,
-        pn: settings?.upi_merchant_name || settings?.app_name || "Uivsoymarks",
+        pn: payment?.upi_merchant_name || settings?.app_name || "Uivsoymarks",
         am: amount,
         tr: orderId,
         tn: `Order ${orderId.slice(0, 6)}`,
