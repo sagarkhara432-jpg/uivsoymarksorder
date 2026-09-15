@@ -31,6 +31,7 @@ function CheckoutPage() {
   const items = useCart();
   const { subtotal, count } = cartTotals(items);
   const { settings } = useAppSettings();
+  const { payment } = usePaymentSettings();
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -244,6 +245,7 @@ function CheckoutPage() {
         open={payOpen}
         total={total}
         settings={settings ?? null}
+        payment={payment ?? null}
         busy={busy}
         onClose={() => setPayOpen(false)}
         onConfirm={confirmOrder}
