@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, Smartphone, Banknote, CreditCard, Copy, Check, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import type { AppSettings } from "@/lib/settings";
+import type { AppSettings, PaymentSettings } from "@/lib/settings";
 import { newPaymentRef, upiDeepLink, type UpiScheme } from "@/lib/upi";
 import QrCode from "./QrCode";
 import MediaImage from "./MediaImage";
@@ -12,12 +12,13 @@ type Props = {
   open: boolean;
   total: number;
   settings: AppSettings | null;
+  payment: PaymentSettings | null;
   busy?: boolean;
   onClose: () => void;
   onConfirm: (method: PaymentMethod) => void;
 };
 
-export default function PaymentSheet({ open, total, settings, busy, onClose, onConfirm }: Props) {
+export default function PaymentSheet({ open, total, settings, payment, busy, onClose, onConfirm }: Props) {
   const [screen, setScreen] = useState<"choose" | "upi">("choose");
   const [copied, setCopied] = useState(false);
   const [ref] = useState(newPaymentRef);
