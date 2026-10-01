@@ -1,8 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import authBg from "@/assets/auth-bg.jpg";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -39,20 +40,29 @@ function AuthPage() {
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-background px-4">
-      <div className="w-full max-w-sm rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-card)]">
-        <Link to="/" className="mb-4 inline-flex items-center gap-2">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <span className="text-xl font-black">U</span>
+    <div className="relative grid min-h-screen place-items-center overflow-hidden px-4">
+      <img
+        src={authBg}
+        alt=""
+        width={1024}
+        height={1920}
+        className="absolute inset-0 h-full w-full object-cover"
+        aria-hidden
+      />
+      <div className="absolute inset-0 bg-foreground/30" />
+      <div className="relative w-full max-w-sm rounded-3xl border border-border/60 bg-card p-6 shadow-[var(--shadow-pop)]">
+        <div className="flex items-center justify-center gap-2">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-card)]">
+            <span className="text-2xl font-black">U</span>
           </div>
-          <span className="font-extrabold tracking-tight">Uivsoymarks</span>
-        </Link>
-        <h1 className="text-2xl font-extrabold">Welcome</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Sign in with Google to continue.</p>
+          <span className="text-xl font-extrabold tracking-tight">Uivsoymarks</span>
+        </div>
+        <h1 className="mt-4 text-center text-2xl font-extrabold">Welcome</h1>
+        <p className="mt-1 text-center text-sm text-muted-foreground">Sign in with Google to continue.</p>
         <button
           onClick={signIn}
           disabled={busy}
-          className="press mt-6 flex w-full items-center justify-center gap-3 rounded-full border border-border bg-surface px-4 py-3 text-sm font-semibold active:bg-accent disabled:opacity-60"
+          className="press mt-6 flex w-full items-center justify-center gap-3 rounded-full bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
         >
           <GoogleGlyph />
           {busy ? "Opening Google…" : "Continue with Google"}
